@@ -26,10 +26,21 @@ import org.apache.dubbo.common.URL;
  * @see org.apache.dubbo.registry.support.AbstractRegistry
  */
 public interface Registry extends Node, RegistryService {
+
+    /**
+     * 内部逻辑委托给 RegistryService 的method
+     *
+     * @param url
+     */
     default void reExportRegister(URL url) {
         register(url);
     }
 
+    /**
+     * 内部逻辑委托给 RegistryService 的method
+     *
+     * @param url
+     */
     default void reExportUnregister(URL url) {
         unregister(url);
     }

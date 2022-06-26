@@ -21,9 +21,11 @@ import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.extension.ExtensionLoader;
 
 import java.util.Collections;
+import java.util.List;
 
 public class RegistryFactoryWrapper implements RegistryFactory {
-    private RegistryFactory registryFactory;
+
+    private final RegistryFactory registryFactory;
 
     public RegistryFactoryWrapper(RegistryFactory registryFactory) {
         this.registryFactory = registryFactory;
@@ -31,8 +33,13 @@ public class RegistryFactoryWrapper implements RegistryFactory {
 
     @Override
     public Registry getRegistry(URL url) {
+        // 通过扩展类加载器获取激活的注册监听器
+        final List<RegistryServiceListener> listeners =
+                ExtensionLoader.getExtensionLoader(RegistryServiceListener.class).getActivateExtension(url, "registry.listeners");
+        final List<RegistryServiceListener> registryServiceListeners =
+                Collections.unmodifiableList(listeners);
+        // 返回包装类且该类实现了Registry接口
         return new ListenerRegistryWrapper(registryFactory.getRegistry(url),
-                Collections.unmodifiableList(ExtensionLoader.getExtensionLoader(RegistryServiceListener.class)
-                        .getActivateExtension(url, "registry.listeners")));
+                registryServiceListeners);
     }
 }
