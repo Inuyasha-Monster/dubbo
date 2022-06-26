@@ -65,6 +65,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
     private final int retryPeriod;
 
     // Timer for failure retry, regular check if there is a request for failure, and if there is, an unlimited retry
+    // 用于定时执行失败重试操作的时间轮。
     private final HashedWheelTimer retryTimer;
 
     public FailbackRegistry(URL url) {
@@ -152,6 +153,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         }
     }
 
+    // removeFailedSubscribed()方法中会清理FailedSubscribedTask、FailedUnsubscribedTask、FailedNotifiedTask三类定时任务
     private void removeFailedSubscribed(URL url, NotifyListener listener) {
         Holder h = new Holder(url, listener);
         FailedSubscribedTask f = failedSubscribed.remove(h);
@@ -250,6 +252,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
                 if (skipFailback) {
                     t = t.getCause();
                 }
+                // 如果是检查开启或者非回退模式则直接抛出异常,让外界感知
                 throw new IllegalStateException("Failed to register " + url + " to registry " + getUrl().getAddress() + ", cause: " + t.getMessage(), t);
             } else {
                 logger.error("Failed to register " + url + ", waiting for retry, cause: " + t.getMessage(), t);
@@ -333,9 +336,10 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             doSubscribe(url, listener);
         } catch (Exception e) {
             Throwable t = e;
-
+            // 发生订阅异常直接获取缓存properties的url地址列表
             List<URL> urls = getCacheUrls(url);
             if (CollectionUtils.isNotEmpty(urls)) {
+                // 触发通知逻辑
                 notify(url, listener, urls);
                 logger.error("Failed to subscribe " + url + ", Using cached list: " + urls + " from cache file: " + getUrl().getParameter(FILE_KEY, System.getProperty("user.home") + "/dubbo-registry-" + url.getHost() + ".cache") + ", cause: " + t.getMessage(), t);
             } else {
@@ -347,6 +351,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
                     if (skipFailback) {
                         t = t.getCause();
                     }
+                    // 如果缓存为空并且开启检查等,直接抛出异常
                     throw new IllegalStateException("Failed to subscribe " + url + ", cause: " + t.getMessage(), t);
                 } else {
                     logger.error("Failed to subscribe " + url + ", waiting for retry, cause: " + t.getMessage(), t);
@@ -437,6 +442,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
     @Override
     public void destroy() {
         super.destroy();
+        // 停止时间轮
         retryTimer.stop();
     }
 
