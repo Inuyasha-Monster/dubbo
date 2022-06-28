@@ -56,7 +56,7 @@ public class NettyServer extends AbstractServer implements RemotingServer {
     private static final Logger logger = LoggerFactory.getLogger(NettyServer.class);
     /**
      * the cache for alive worker channel.
-     * <ip:port, dubbo channel>
+     * <ip:port, dubbo channel 内部持有了netty channel>
      */
     private Map<String, Channel> channels;
     /**
@@ -66,7 +66,7 @@ public class NettyServer extends AbstractServer implements RemotingServer {
     /**
      * the boss channel that receive connections and dispatch these to worker channel.
      */
-	private io.netty.channel.Channel channel;
+    private io.netty.channel.Channel channel;
 
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
@@ -91,7 +91,9 @@ public class NettyServer extends AbstractServer implements RemotingServer {
                 getUrl().getPositiveParameter(IO_THREADS_KEY, Constants.DEFAULT_IO_THREADS),
                 "NettyServerWorker");
 
+        // NettyServerHandler 实际上是一个双向通道，内部持有了当前url所有的连接对象
         final NettyServerHandler nettyServerHandler = new NettyServerHandler(getUrl(), this);
+        // 持有当前server存活的通道引用
         channels = nettyServerHandler.getChannels();
 
         bootstrap.group(bossGroup, workerGroup)

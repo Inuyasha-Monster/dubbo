@@ -92,6 +92,7 @@ final public class NettyCodecAdapter {
                         throw new IOException("Decode without read data.");
                     }
                     if (msg != null) {
+                        // 将读取到的消息传递给后面的Handler处理
                         out.add(msg);
                     }
                 }
