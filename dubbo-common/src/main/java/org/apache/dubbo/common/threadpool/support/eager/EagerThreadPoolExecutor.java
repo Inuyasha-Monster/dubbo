@@ -37,7 +37,8 @@ public class EagerThreadPoolExecutor extends ThreadPoolExecutor {
     public EagerThreadPoolExecutor(int corePoolSize,
                                    int maximumPoolSize,
                                    long keepAliveTime,
-                                   TimeUnit unit, TaskQueue<Runnable> workQueue,
+                                   TimeUnit unit,
+                                   TaskQueue<Runnable> workQueue, // 这个东西是关键
                                    ThreadFactory threadFactory,
                                    RejectedExecutionHandler handler) {
         super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, threadFactory, handler);

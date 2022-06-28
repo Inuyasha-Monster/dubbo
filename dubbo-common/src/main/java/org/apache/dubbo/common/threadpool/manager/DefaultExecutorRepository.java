@@ -42,17 +42,20 @@ import static org.apache.dubbo.common.constants.CommonConstants.THREADS_KEY;
 public class DefaultExecutorRepository implements ExecutorRepository {
     private static final Logger logger = LoggerFactory.getLogger(DefaultExecutorRepository.class);
 
-    private int DEFAULT_SCHEDULER_SIZE = Runtime.getRuntime().availableProcessors();
+    private final int DEFAULT_SCHEDULER_SIZE = Runtime.getRuntime().availableProcessors();
 
     private final ExecutorService SHARED_EXECUTOR = Executors.newCachedThreadPool(new NamedThreadFactory("DubboSharedHandler", true));
 
-    private Ring<ScheduledExecutorService> scheduledExecutors = new Ring<>();
+    private final Ring<ScheduledExecutorService> scheduledExecutors = new Ring<>();
 
-    private ScheduledExecutorService serviceExporterExecutor;
+    private final ScheduledExecutorService serviceExporterExecutor;
 
     private ScheduledExecutorService reconnectScheduledExecutor;
 
-    private ConcurrentMap<String, ConcurrentMap<Integer, ExecutorService>> data = new ConcurrentHashMap<>();
+    /**
+     * 缓存已有的线程池，第一层 Key 值表示线程池属于 Provider 端还是 Consumer 端，第二层 Key 值表示线程池关联服务的端口。
+     */
+    private final ConcurrentMap<String, ConcurrentMap<Integer, ExecutorService>> data = new ConcurrentHashMap<>();
 
     public DefaultExecutorRepository() {
 //        for (int i = 0; i < DEFAULT_SCHEDULER_SIZE; i++) {
@@ -71,14 +74,18 @@ public class DefaultExecutorRepository implements ExecutorRepository {
      * @return
      */
     public synchronized ExecutorService createExecutorIfAbsent(URL url) {
+        // 根据URL中的side参数值决定第一层key，也就是确定是 provider 还是 consumer
         String componentKey = EXECUTOR_SERVICE_COMPONENT_KEY;
         if (CONSUMER_SIDE.equalsIgnoreCase(url.getParameter(SIDE_KEY))) {
             componentKey = CONSUMER_SIDE;
         }
         Map<Integer, ExecutorService> executors = data.computeIfAbsent(componentKey, k -> new ConcurrentHashMap<>());
+        // 根据URL中的port值确定第二层key
         Integer portKey = url.getPort();
         ExecutorService executor = executors.computeIfAbsent(portKey, k -> createExecutor(url));
         // If executor has been shut down, create a new one
+        // 如果缓存中相应的线程池已关闭，则同样需要调用createExecutor()方法
+        // 创建新的线程池，并替换掉缓存中已关闭的线程持，这里省略这段逻辑
         if (executor.isShutdown() || executor.isTerminated()) {
             executors.remove(portKey);
             executor = createExecutor(url);

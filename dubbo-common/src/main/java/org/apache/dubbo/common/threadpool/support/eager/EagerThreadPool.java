@@ -39,6 +39,9 @@ import static org.apache.dubbo.common.constants.CommonConstants.THREAD_NAME_KEY;
  * EagerThreadPool
  * When the core threads are all in busy,
  * create new thread instead of putting task into blocking queue.
+ * 在线程数没有达到最大线程数的前提下，EagerThreadPoolExecutor 会优先创建线程来执行任务，而不是放到缓冲队列中；
+ * <p>
+ * 当线程数达到最大值时，EagerThreadPoolExecutor 会将任务放入缓冲队列，等待空闲线程。
  */
 public class EagerThreadPool implements ThreadPool {
 
@@ -58,7 +61,7 @@ public class EagerThreadPool implements ThreadPool {
                 TimeUnit.MILLISECONDS,
                 taskQueue,
                 new NamedInternalThreadFactory(name, true),
-                new AbortPolicyWithReport(name, url));
+                new AbortPolicyWithReport(name, url)); // 自定义拒绝策略
         taskQueue.setExecutor(executor);
         return executor;
     }
