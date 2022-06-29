@@ -42,6 +42,13 @@ public class ChannelHandlers {
         INSTANCE = instance;
     }
 
+    /**
+     * 典型的装饰器模式，一层包一层
+     *
+     * @param handler
+     * @param url
+     * @return
+     */
     protected ChannelHandler wrapInternal(ChannelHandler handler, URL url) {
         return new MultiMessageHandler(new HeartbeatHandler(ExtensionLoader.getExtensionLoader(Dispatcher.class)
                 .getAdaptiveExtension().dispatch(handler, url)));

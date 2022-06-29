@@ -121,6 +121,7 @@ public class NettyClientHandler extends ChannelDuplexHandler {
                 req.setVersion(Version.getProtocolVersion());
                 req.setTwoWay(true);
                 req.setEvent(HEARTBEAT_EVENT);
+                // 发送心跳请求
                 channel.send(req);
             } finally {
                 NettyChannel.removeChannelIfDisconnected(ctx.channel());

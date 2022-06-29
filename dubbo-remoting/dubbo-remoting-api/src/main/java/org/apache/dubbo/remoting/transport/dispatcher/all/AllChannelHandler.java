@@ -61,7 +61,8 @@ public class AllChannelHandler extends WrappedChannelHandler {
         try {
             executor.execute(new ChannelEventRunnable(channel, handler, ChannelState.RECEIVED, message));
         } catch (Throwable t) {
-        	if(message instanceof Request && t instanceof RejectedExecutionException){
+            // 如果线程池满了，请求会被拒绝，这里会根据请求配置决定是否返回一个说明性的响应
+            if(message instanceof Request && t instanceof RejectedExecutionException){
                 sendFeedback(channel, (Request) message, t);
                 return;
         	}

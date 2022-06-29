@@ -89,6 +89,7 @@ public class NettyClient extends AbstractClient {
      */
     @Override
     protected void doOpen() throws Throwable {
+        // 定义client端的IO处理器
         final NettyClientHandler nettyClientHandler = new NettyClientHandler(getUrl(), this);
         bootstrap = new Bootstrap();
         bootstrap.group(NIO_EVENT_LOOP_GROUP)
@@ -97,7 +98,7 @@ public class NettyClient extends AbstractClient {
                 .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
                 //.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, getTimeout())
                 .channel(socketChannelClass());
-
+        // 设置连接超时时间，这里使用到AbstractEndpoint中的connectTimeout字段
         bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, Math.max(3000, getConnectTimeout()));
         bootstrap.handler(new ChannelInitializer<SocketChannel>() {
 

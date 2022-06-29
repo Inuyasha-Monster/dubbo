@@ -32,7 +32,7 @@ import java.util.concurrent.TimeoutException;
 /**
  * The most important difference between this Executor and other normal Executor is that this one doesn't manage
  * any thread.
- *
+ * <p>
  * Tasks submitted to this executor through {@link #execute(Runnable)} will not get scheduled to a specific thread, though normal executors always do the schedule.
  * Those tasks are stored in a blocking queue and will only be executed when a thread calls {@link #waitAndDrain()}, the thread executing the task
  * is exactly the same as the one calling waitAndDrain.
@@ -42,7 +42,7 @@ public class ThreadlessExecutor extends AbstractExecutorService {
 
     private final BlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
 
-    private ExecutorService sharedExecutor;
+    private final ExecutorService sharedExecutor;
 
     private CompletableFuture<?> waitingFuture;
 
@@ -99,7 +99,6 @@ public class ThreadlessExecutor extends AbstractExecutorService {
                 runnable.run();
             } catch (Throwable t) {
                 logger.info(t);
-
             }
             runnable = queue.poll();
         }

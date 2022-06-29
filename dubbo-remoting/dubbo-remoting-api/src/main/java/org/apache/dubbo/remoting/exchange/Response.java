@@ -78,8 +78,10 @@ public class Response {
      */
     public static final byte SERVER_THREADPOOL_EXHAUSTED_ERROR = 100;
 
+    // 响应ID，与相应请求的ID一致
     private long mId = 0;
 
+    // 当前协议的版本号，与请求消息的版本号一致
     private String mVersion;
 
     private byte mStatus = OK;
