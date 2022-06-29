@@ -99,19 +99,25 @@ public class DefaultFuture extends CompletableFuture<Object> {
      * 1.init a DefaultFuture
      * 2.timeout check
      *
-     * @param channel channel
-     * @param request the request
-     * @param timeout timeout
+     * @param channel  channel
+     * @param request  the request
+     * @param timeout  timeout
+     * @param executor sad
      * @return a new DefaultFuture
      */
     public static DefaultFuture newFuture(Channel channel, Request request, int timeout, ExecutorService executor) {
         final DefaultFuture future = new DefaultFuture(channel, request, timeout);
         future.setExecutor(executor);
+
+        // 对于ThreadlessExecutor的特殊处理，ThreadlessExecutor可以关联一个waitingFuture，
+        // 就是这里创建DefaultFuture对象
+
         // ThreadlessExecutor needs to hold the waiting future in case of circuit return.
         if (executor instanceof ThreadlessExecutor) {
             ((ThreadlessExecutor) executor).setWaitingFuture(future);
         }
         // timeout check
+        // 创建一个定时任务，用处理响应超时的情况
         timeoutCheck(future);
         return future;
     }
@@ -214,9 +220,11 @@ public class DefaultFuture extends CompletableFuture<Object> {
 
         // the result is returning, but the caller thread may still waiting
         // to avoid endless waiting for whatever reason, notify caller thread to return.
+        // 下面是针对ThreadlessExecutor的兜底处理，主要是防止业务线程一直阻塞在ThreadlessExecutor上
         if (executor != null && executor instanceof ThreadlessExecutor) {
             ThreadlessExecutor threadlessExecutor = (ThreadlessExecutor) executor;
             if (threadlessExecutor.isWaiting()) {
+                // notifyReturn()方法会向ThreadlessExecutor提交一个任务，这样业务线程就不会阻塞了，提交的任务会尝试将DefaultFuture设置为异常结束
                 threadlessExecutor.notifyReturn(new IllegalStateException("The result has returned, but the biz thread is still waiting" +
                         " which is not an expected state, interrupt the thread manually by returning an exception."));
             }
