@@ -101,6 +101,10 @@ public class HeaderExchangeServer implements ExchangeServer {
 
     @Override
     public void close(final int timeout) {
+        // 将被修饰的 RemotingServer 的 closing 字段设置为 true，
+        // 表示这个 Server 端正在关闭，不再接受新 Client 的连接。
+        // 你可以回顾第 19 课时中介绍的 AbstractServer.connected() 方法，
+        // 会发现 Server 正在关闭或是已经关闭时，则直接关闭新建的 Client 连接。
         startClose();
         if (timeout > 0) {
             final long max = (long) timeout;
@@ -108,6 +112,7 @@ public class HeaderExchangeServer implements ExchangeServer {
             if (getUrl().getParameter(Constants.CHANNEL_SEND_READONLYEVENT_KEY, true)) {
                 sendChannelReadOnlyEvent();
             }
+            // 循环去检测是否还存在 Client 与当前 Server 维持着长连接，直至全部 Client 断开连接或超时。
             while (HeaderExchangeServer.this.isRunning()
                     && System.currentTimeMillis() - start < max) {
                 try {
@@ -117,7 +122,9 @@ public class HeaderExchangeServer implements ExchangeServer {
                 }
             }
         }
+        // 将自身closed字段设置为true，取消CloseTimerTask定时任务
         doClose();
+        // 关闭Transport层的Server
         server.close(timeout);
     }
 

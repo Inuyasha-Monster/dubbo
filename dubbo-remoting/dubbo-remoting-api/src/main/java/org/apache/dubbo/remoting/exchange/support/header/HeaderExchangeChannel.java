@@ -149,6 +149,9 @@ final class HeaderExchangeChannel implements ExchangeChannel {
     public void close() {
         try {
             // graceful close
+            // 如果当前 Channel 上还有请求未收到响应，会循环等待至收到响应，
+            // 如果超时未收到响应，会自己创建一个状态码将连接关闭的 Response 交给 DefaultFuture 处理，
+            // 与收到 disconnected 事件相同
             DefaultFuture.closeChannel(channel);
             channel.close();
         } catch (Throwable e) {

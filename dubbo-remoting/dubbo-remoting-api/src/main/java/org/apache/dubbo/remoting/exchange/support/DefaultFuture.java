@@ -48,9 +48,9 @@ public class DefaultFuture extends CompletableFuture<Object> {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultFuture.class);
 
-    private static final Map<Long, Channel> CHANNELS = new ConcurrentHashMap<>();
+    private static final Map<Long /* requestId */, Channel> CHANNELS = new ConcurrentHashMap<>();
 
-    private static final Map<Long, DefaultFuture> FUTURES = new ConcurrentHashMap<>();
+    private static final Map<Long /* requestId */, DefaultFuture> FUTURES = new ConcurrentHashMap<>();
 
     public static final Timer TIME_OUT_TIMER = new HashedWheelTimer(
             new NamedThreadFactory("dubbo-future-timeout", true),

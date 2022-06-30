@@ -46,20 +46,27 @@ public abstract class AbstractCodec implements Codec2 {
         if (channel != null && channel.getUrl() != null) {
             payload = channel.getUrl().getParameter(Constants.PAYLOAD_KEY, Constants.DEFAULT_PAYLOAD);
         }
+        // 大于默认的8M直接抛出异常
         if (payload > 0 && size > payload) {
             ExceedPayloadLimitException e = new ExceedPayloadLimitException(
-                "Data length too large: " + size + ", max payload: " + payload + ", channel: " + channel);
+                    "Data length too large: " + size + ", max payload: " + payload + ", channel: " + channel);
             logger.error(e);
             throw e;
         }
     }
 
+    /**
+     * 通过url获取序列化器
+     *
+     * @param channel
+     * @return
+     */
     protected Serialization getSerialization(Channel channel) {
         return CodecSupport.getSerialization(channel.getUrl());
     }
 
     protected boolean isClientSide(Channel channel) {
-        String side = (String)channel.getAttribute(SIDE_KEY);
+        String side = (String) channel.getAttribute(SIDE_KEY);
         if (CLIENT_SIDE.equals(side)) {
             return true;
         } else if (SERVER_SIDE.equals(side)) {
@@ -68,11 +75,11 @@ public abstract class AbstractCodec implements Codec2 {
             InetSocketAddress address = channel.getRemoteAddress();
             URL url = channel.getUrl();
             boolean isClient = url.getPort() == address.getPort()
-                && NetUtils.filterLocalHost(url.getIp()).equals(
-                NetUtils.filterLocalHost(address.getAddress()
-                    .getHostAddress()));
+                    && NetUtils.filterLocalHost(url.getIp()).equals(
+                    NetUtils.filterLocalHost(address.getAddress()
+                            .getHostAddress()));
             channel.setAttribute(SIDE_KEY, isClient ? CLIENT_SIDE
-                : SERVER_SIDE);
+                    : SERVER_SIDE);
             return isClient;
         }
     }

@@ -139,8 +139,11 @@ public class HeaderExchangeClient implements ExchangeClient {
     @Override
     public void close(int timeout) {
         // Mark the client into the closure process
+        // 将closing字段设置为true
         startClose();
+        // 关闭心跳定时任务和重连定时任务
         doClose();
+        // 关闭HeaderExchangeChannel
         channel.close(timeout);
     }
 
