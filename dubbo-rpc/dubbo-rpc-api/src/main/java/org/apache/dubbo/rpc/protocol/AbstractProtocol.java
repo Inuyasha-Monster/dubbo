@@ -69,6 +69,9 @@ public abstract class AbstractProtocol implements Protocol {
         return Collections.unmodifiableList(new ArrayList<>(serverMap.values()));
     }
 
+    /**
+     * 其首先会遍历 Invokers 集合，销毁全部的服务引用，然后遍历全部的 exporterMap 集合，销毁发布出去的服务
+     */
     @Override
     public void destroy() {
         for (Invoker<?> invoker : invokers) {
@@ -78,6 +81,7 @@ public abstract class AbstractProtocol implements Protocol {
                     if (logger.isInfoEnabled()) {
                         logger.info("Destroy reference: " + invoker.getUrl());
                     }
+                    // 关闭全部的服务引用
                     invoker.destroy();
                 } catch (Throwable t) {
                     logger.warn(t.getMessage(), t);
@@ -91,6 +95,7 @@ public abstract class AbstractProtocol implements Protocol {
                     if (logger.isInfoEnabled()) {
                         logger.info("Unexport service: " + exporter.getInvoker().getUrl());
                     }
+                    // 关闭暴露出去的服务
                     exporter.unexport();
                 } catch (Throwable t) {
                     logger.warn(t.getMessage(), t);

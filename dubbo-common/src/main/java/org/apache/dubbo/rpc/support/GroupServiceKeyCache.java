@@ -26,7 +26,7 @@ public class GroupServiceKeyCache {
     private final String serviceGroup;
 
     //ConcurrentMap<serviceName, ConcurrentMap<serviceVersion, ConcurrentMap<port, String>>>
-    private final ConcurrentMap<String, ConcurrentMap<String, ConcurrentMap<Integer, String>>> serviceKeyMap;
+    private final ConcurrentMap<String /* serviceName */, ConcurrentMap<String /* serviceVersion */, ConcurrentMap<Integer /* port */, String>>> serviceKeyMap;
 
     public GroupServiceKeyCache(String serviceGroup) {
         this.serviceGroup = serviceGroup;
