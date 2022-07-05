@@ -164,6 +164,7 @@ final class ReferenceCountExchangeClient implements ExchangeClient {
                 client.close(timeout);
             }
 
+            // 创建LazyConnectExchangeClient，并将client字段指向该对象
             replaceWithLazyClient();
         }
     }
@@ -181,6 +182,7 @@ final class ReferenceCountExchangeClient implements ExchangeClient {
      */
     private void replaceWithLazyClient() {
         // this is a defensive operation to avoid client is closed by accident, the initial state of the client is false
+        // 在原有的URL之上，添加一些LazyConnectExchangeClient特有的参数
         URL lazyUrl = URLBuilder.from(url)
                 .addParameter(LAZY_CONNECT_INITIAL_STATE_KEY, Boolean.TRUE)
                 .addParameter(RECONNECT_KEY, Boolean.FALSE)
@@ -193,6 +195,7 @@ final class ReferenceCountExchangeClient implements ExchangeClient {
         /**
          * the order of judgment in the if statement cannot be changed.
          */
+        // 如果当前client字段已经指向了LazyConnectExchangeClient，则不需要再次创建LazyConnectExchangeClient兜底了
         if (!(client instanceof LazyConnectExchangeClient) || client.isClosed()) {
             client = new LazyConnectExchangeClient(lazyUrl, client.getExchangeHandler());
         }

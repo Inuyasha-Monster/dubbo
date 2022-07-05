@@ -76,12 +76,13 @@ public abstract class AbstractProtocol implements Protocol {
     public void destroy() {
         for (Invoker<?> invoker : invokers) {
             if (invoker != null) {
+                // 移除引用
                 invokers.remove(invoker);
                 try {
                     if (logger.isInfoEnabled()) {
                         logger.info("Destroy reference: " + invoker.getUrl());
                     }
-                    // 关闭全部的服务引用
+                    // 关闭全部的服务引用：设置 available = false
                     invoker.destroy();
                 } catch (Throwable t) {
                     logger.warn(t.getMessage(), t);
@@ -95,7 +96,7 @@ public abstract class AbstractProtocol implements Protocol {
                     if (logger.isInfoEnabled()) {
                         logger.info("Unexport service: " + exporter.getInvoker().getUrl());
                     }
-                    // 关闭暴露出去的服务
+                    // 关闭暴露出去的服务：设置 unexported = true
                     exporter.unexport();
                 } catch (Throwable t) {
                     logger.warn(t.getMessage(), t);

@@ -99,6 +99,7 @@ public class DubboProtocol extends AbstractProtocol {
     private static DubboProtocol INSTANCE;
 
     /**
+     * 共享连接Map
      * <host:port,Exchanger>
      */
     private final Map<String, List<ReferenceCountExchangeClient>> referenceClientMap = new ConcurrentHashMap<>();
@@ -300,7 +301,9 @@ public class DubboProtocol extends AbstractProtocol {
             }
         }
 
+        // 启动ProtocolServer
         openServer(url);
+        // 进行序列化的优化处理
         optimizeSerialization(url);
 
         return exporter;
@@ -311,17 +314,21 @@ public class DubboProtocol extends AbstractProtocol {
         String key = url.getAddress();
         //client can export a service which's only for server to invoke
         boolean isServer = url.getParameter(IS_SERVER_KEY, true);
+        // 判断是provider端才会初始化server
         if (isServer) {
             ProtocolServer server = serverMap.get(key);
             if (server == null) {
+                // 锁保证并发的对象创建
                 synchronized (this) {
                     server = serverMap.get(key);
                     if (server == null) {
+                        // 调用createServer()方法创建ProtocolServer对象
                         serverMap.put(key, createServer(url));
                     }
                 }
             } else {
                 // server supports reset, use together with override
+                // 如果存在则重置server配置
                 server.reset(url);
             }
         }
@@ -335,12 +342,14 @@ public class DubboProtocol extends AbstractProtocol {
                 .addParameterIfAbsent(HEARTBEAT_KEY, String.valueOf(DEFAULT_HEARTBEAT))
                 .addParameter(CODEC_KEY, DubboCodec.NAME)
                 .build();
+        // 默认netty4的实现
         String str = url.getParameter(SERVER_KEY, DEFAULT_REMOTING_SERVER);
 
         if (str != null && str.length() > 0 && !ExtensionLoader.getExtensionLoader(Transporter.class).hasExtension(str)) {
             throw new RpcException("Unsupported server type: " + str + ", url: " + url);
         }
 
+        // 通过Exchangers门面类，创建ExchangeServer对象
         ExchangeServer server;
         try {
             server = Exchangers.bind(url, requestHandler);
@@ -355,7 +364,7 @@ public class DubboProtocol extends AbstractProtocol {
                 throw new RpcException("Unsupported client type: " + str);
             }
         }
-
+        // 将ExchangeServer封装成DubboProtocolServer返回
         return new DubboProtocolServer(server);
     }
 
@@ -451,6 +460,7 @@ public class DubboProtocol extends AbstractProtocol {
         List<ReferenceCountExchangeClient> clients = referenceClientMap.get(key);
 
         if (checkClientCanUse(clients)) {
+            // 如果所有client可用则增加计数器之后直接返回
             batchClientRefIncr(clients);
             return clients;
         }
@@ -458,7 +468,7 @@ public class DubboProtocol extends AbstractProtocol {
         locks.putIfAbsent(key, new Object());
         synchronized (locks.get(key)) {
             clients = referenceClientMap.get(key);
-            // dubbo check
+            // dubbo check 二次检查是否可用
             if (checkClientCanUse(clients)) {
                 batchClientRefIncr(clients);
                 return clients;
@@ -469,6 +479,7 @@ public class DubboProtocol extends AbstractProtocol {
 
             // If the clients is empty, then the first initialization is
             if (CollectionUtils.isEmpty(clients)) {
+                // 如果当前Clients集合为空，则直接通过initClient()方法初始化所有共享客户端
                 clients = buildReferenceCountExchangeClientList(url, connectNum);
                 referenceClientMap.put(key, clients);
 
@@ -476,6 +487,7 @@ public class DubboProtocol extends AbstractProtocol {
                 for (int i = 0; i < clients.size(); i++) {
                     ReferenceCountExchangeClient referenceCountExchangeClient = clients.get(i);
                     // If there is a client in the list that is no longer available, create a new one to replace him.
+                    // 如果只有部分共享客户端不可用，则只需要处理这些不可用的客户端
                     if (referenceCountExchangeClient == null || referenceCountExchangeClient.isClosed()) {
                         clients.set(i, buildReferenceCountExchangeClient(url));
                         continue;
@@ -489,6 +501,9 @@ public class DubboProtocol extends AbstractProtocol {
              * I understand that the purpose of the remove operation here is to avoid the expired url key
              * always occupying this memory space.
              */
+
+            // 清理locks集合中的锁对象，防止内存泄漏，如果key对应的服务宕机或是下线，
+            // 这里不进行清理的话，这个用于加锁的Object对象是无法被GC的，从而出现内存泄漏
             locks.remove(key);
 
             return clients;
@@ -552,6 +567,7 @@ public class DubboProtocol extends AbstractProtocol {
 
     /**
      * Build a single client
+     * 创建一个具备引用基数的clinet对象
      *
      * @param url
      * @return
@@ -586,9 +602,10 @@ public class DubboProtocol extends AbstractProtocol {
         try {
             // connection should be lazy
             if (url.getParameter(LAZY_CONNECT_KEY, false)) {
+                // 延迟连接
                 client = new LazyConnectExchangeClient(url, requestHandler);
-
             } else {
+                // 立即触发连接
                 client = Exchangers.connect(url, requestHandler);
             }
 

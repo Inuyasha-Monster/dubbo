@@ -174,10 +174,13 @@ public class DubboCodec extends ExchangeCodec {
         if (serviceName == null) {
             serviceName = inv.getAttachment(PATH_KEY);
         }
+        // 写入服务名称
         out.writeUTF(serviceName);
+        // 写入Service版本号
         out.writeUTF(inv.getAttachment(VERSION_KEY));
-
+        // 写入方法名称
         out.writeUTF(inv.getMethodName());
+        // 写入参数类型列表
         out.writeUTF(inv.getParameterTypesDesc());
         Object[] args = inv.getArguments();
         if (args != null) {
