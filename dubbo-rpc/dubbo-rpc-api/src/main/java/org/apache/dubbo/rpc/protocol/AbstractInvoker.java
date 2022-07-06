@@ -51,8 +51,14 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
+    /**
+     * 接口类型，例如：DemoService
+     */
     private final Class<T> type;
 
+    /**
+     * 与当前 Invoker 关联的 URL 对象，其中包含了全部的配置信息
+     */
     private final URL url;
 
     private final Map<String, Object> attachment;
@@ -155,7 +161,9 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
             invocation.addObjectAttachments(contextAttachments);
         }
 
+        // 设置请求模式
         invocation.setInvokeMode(RpcUtils.getInvokeMode(url, invocation));
+        // 如果是异步调用，给这次调用添加一个唯一ID
         RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation);
 
         AsyncRpcResult asyncResult;

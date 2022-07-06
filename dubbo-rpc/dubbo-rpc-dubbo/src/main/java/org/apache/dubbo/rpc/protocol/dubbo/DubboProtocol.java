@@ -440,8 +440,8 @@ public class DubboProtocol extends AbstractProtocol {
         for (int i = 0; i < clients.length; i++) {
             if (useShareConnect) {
                 clients[i] = shareClients.get(i);
-
             } else {
+                // 创建新的连接
                 clients[i] = initClient(url);
             }
         }
@@ -632,7 +632,11 @@ public class DubboProtocol extends AbstractProtocol {
                     logger.info("Close dubbo server: " + server.getLocalAddress());
                 }
 
+                // 在close()方法中，发送ReadOnly请求、阻塞指定时间、关闭底层的定时任务、关闭相关线程池，最终，会断开所有连接，关闭Server。
+                // 这些逻辑在前文介绍HeaderExchangeServer、NettyServer等实现的时候，已经详细分析过了，这里不再展开
                 server.close(ConfigurationUtils.getServerShutdownTimeout());
+                // ConfigurationUtils.getServerShutdownTimeout() 方法返回的阻塞时长默认是 10 秒，
+                // 我们可以通过 dubbo.service.shutdown.wait 或是 dubbo.service.shutdown.wait.seconds 进行配置。
 
             } catch (Throwable t) {
                 logger.warn(t.getMessage(), t);
