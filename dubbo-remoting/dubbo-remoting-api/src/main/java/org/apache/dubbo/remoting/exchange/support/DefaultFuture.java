@@ -171,13 +171,16 @@ public class DefaultFuture extends CompletableFuture<Object> {
 
     public static void received(Channel channel, Response response, boolean timeout) {
         try {
+            // 根据请求Id拿到对应的future对象
             DefaultFuture future = FUTURES.remove(response.getId());
             if (future != null) {
                 Timeout t = future.timeoutCheckTask;
+                // 如果定时任务还没超时则取消它
                 if (!timeout) {
                     // decrease Time
                     t.cancel();
                 }
+                // 设置响应结果并唤醒阻塞线程
                 future.doReceived(response);
             } else {
                 logger.warn("The timeout response finally returned at "
@@ -211,6 +214,7 @@ public class DefaultFuture extends CompletableFuture<Object> {
             throw new IllegalStateException("response cannot be null");
         }
         if (res.getStatus() == Response.OK) {
+            // 响应结果是正常则则设置 future的完成结果，并实现阻塞调用者线程唤醒
             this.complete(res.getResult());
         } else if (res.getStatus() == Response.CLIENT_TIMEOUT || res.getStatus() == Response.SERVER_TIMEOUT) {
             this.completeExceptionally(new TimeoutException(res.getStatus() == Response.SERVER_TIMEOUT, channel, res.getErrorMessage()));

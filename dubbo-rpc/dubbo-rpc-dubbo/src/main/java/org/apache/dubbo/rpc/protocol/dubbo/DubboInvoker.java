@@ -107,6 +107,7 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
             } else { // 需要关注返回值的请求
                 // 同步情况返回 ThreadlessExecutor；异步请求的情况，返回共享线程池
                 ExecutorService executor = getCallbackExecutor(getUrl(), inv);
+                // request方法内部由 HeaderExchangeChannel.request 创建 DefaultFuture.newFuture 返回
                 CompletableFuture<AppResponse> appResponseFuture =
                         currentClient.request(inv, timeout, executor).thenApply(obj -> (AppResponse) obj);
                 // save for 2.6.x compatibility, for example, TraceFilter in Zipkin uses com.alibaba.xxx.FutureAdapter
