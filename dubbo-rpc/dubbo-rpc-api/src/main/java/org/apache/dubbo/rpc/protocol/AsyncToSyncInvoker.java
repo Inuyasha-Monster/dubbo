@@ -57,6 +57,7 @@ public class AsyncToSyncInvoker<T> implements Invoker<T> {
                  * NOTICE!
                  * must call {@link java.util.concurrent.CompletableFuture#get(long, TimeUnit)} because
                  * {@link java.util.concurrent.CompletableFuture#get()} was proved to have serious performance drop.
+                 * 说人话：CompletableFuture.get() 方法内部在老jdk8的版本存在循环调用一个「系统调用」导致性能损害
                  */
                 asyncResult.get(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
             }
