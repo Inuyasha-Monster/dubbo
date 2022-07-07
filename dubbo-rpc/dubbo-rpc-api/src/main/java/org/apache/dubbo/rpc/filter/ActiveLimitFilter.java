@@ -59,6 +59,7 @@ public class ActiveLimitFilter implements Filter, Filter.Listener {
             synchronized (rpcStatus) {
                 while (!RpcStatus.beginCount(url, methodName, max)) {
                     try {
+                        // 按照剩余的超时时间进行阻塞等待
                         rpcStatus.wait(remain);
                     } catch (InterruptedException e) {
                         // ignore
@@ -86,8 +87,9 @@ public class ActiveLimitFilter implements Filter, Filter.Listener {
         String methodName = invocation.getMethodName();
         URL url = invoker.getUrl();
         int max = invoker.getUrl().getMethodParameter(methodName, ACTIVES_KEY, 0);
-
+        // 调用 RpcStatus.endCount() 方法完成调用监控的统计
         RpcStatus.endCount(url, methodName, getElapsed(invocation), true);
+        // 调用 notifyFinish() 方法唤醒阻塞在对应 RpcStatus 对象上的线程
         notifyFinish(RpcStatus.getStatus(url, methodName), max);
     }
 

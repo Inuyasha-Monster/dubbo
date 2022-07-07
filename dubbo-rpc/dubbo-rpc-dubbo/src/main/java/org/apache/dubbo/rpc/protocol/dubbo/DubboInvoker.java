@@ -173,14 +173,19 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
     private int calculateTimeout(Invocation invocation, String methodName) {
         Object countdown = RpcContext.getContext().get(TIME_COUNTDOWN_KEY);
         int timeout = DEFAULT_TIMEOUT;
-        if (countdown == null) {
+        if (countdown == null) {  // RpcContext中没有指定TIME_COUNTDOWN_KEY，则使用timeout配置
+            // 获取timeout配置指定的超时时长，默认值为1秒
             timeout = (int) RpcUtils.getTimeout(getUrl(), methodName, RpcContext.getContext(), DEFAULT_TIMEOUT);
             if (getUrl().getParameter(ENABLE_TIMEOUT_COUNTDOWN_KEY, false)) {
+                // 如果开启了ENABLE_TIMEOUT_COUNTDOWN_KEY，则通过TIMEOUT_ATTACHENT_KEY将超时时间传递给「Provider」端
                 invocation.setObjectAttachment(TIMEOUT_ATTACHENT_KEY, timeout); // pass timeout to remote server
             }
         } else {
+            // 当前RpcContext中已经通过TIME_COUNTDOWN_KEY指定了超时时间，则使用该值作为超时时间
             TimeoutCountDown timeoutCountDown = (TimeoutCountDown) countdown;
+            // 获取剩余时间
             timeout = (int) timeoutCountDown.timeRemaining(TimeUnit.MILLISECONDS);
+            // 将剩余超时时间放入attachment中，传递给Provider端
             invocation.setObjectAttachment(TIMEOUT_ATTACHENT_KEY, timeout);// pass timeout to remote server
         }
         return timeout;

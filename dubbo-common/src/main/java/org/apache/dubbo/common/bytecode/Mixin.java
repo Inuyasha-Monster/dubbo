@@ -172,6 +172,7 @@ public abstract class Mixin {
             ccm.setClassName(fcn);
             ccm.addDefaultConstructor();
             ccm.setSuperClass(Mixin.class.getName());
+            // 实现newInstance()方法，返回上面创建的代理实例类的对象
             ccm.addMethod("public Object newInstance(Object[] delegates){ return new " + micn + "($1); }");
             Class<?> mixin = ccm.toClass();
             return (Mixin) mixin.newInstance();

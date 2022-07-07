@@ -32,11 +32,36 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class RpcStatus {
 
+    /**
+     * SERVICE_STATISTICS 集合（ConcurrentMap<String, RpcStatus> 类型），
+     * 这个集合记录了当前 Consumer 调用每个服务的状态信息，其中 Key 是 URL，Value 是对应的 RpcStatus 对象；
+     */
     private static final ConcurrentMap<String, RpcStatus> SERVICE_STATISTICS = new ConcurrentHashMap<String, RpcStatus>();
 
+    /**
+     * METHOD_STATISTICS 集合（ConcurrentMap<String, ConcurrentMap<String, RpcStatus>> 类型），
+     * 这个集合记录了当前 Consumer 调用每个服务方法的状态信息，
+     * 其中第一层 Key 是 URL ，第二层 Key 是方法名称，第三层是对应的 RpcStatus 对象。
+     */
     private static final ConcurrentMap<String, ConcurrentMap<String, RpcStatus>> METHOD_STATISTICS = new ConcurrentHashMap<String, ConcurrentMap<String, RpcStatus>>();
+
     private final ConcurrentMap<String, Object> values = new ConcurrentHashMap<String, Object>();
+
+    /**
+     * 当前并发度。这也是 ActiveLimitFilter 中关注的并发度。
+     */
     private final AtomicInteger active = new AtomicInteger();
+
+    /**
+     * total（AtomicLong 类型）：调用的总数。
+     * failed（AtomicInteger 类型）：失败的调用数。
+     * totalElapsed（AtomicLong 类型）：所有调用的总耗时。
+     * failedElapsed（AtomicLong 类型）：所有失败调用的总耗时。
+     * maxElapsed（AtomicLong 类型）：所有调用中最长的耗时。
+     * failedMaxElapsed（AtomicLong 类型）：所有失败调用中最长的耗时。
+     * succeededMaxElapsed（AtomicLong 类型）：所有成功调用中最长的耗时
+     */
+
     private final AtomicLong total = new AtomicLong();
     private final AtomicInteger failed = new AtomicInteger();
     private final AtomicLong totalElapsed = new AtomicLong();
@@ -92,6 +117,10 @@ public class RpcStatus {
     }
 
     /**
+     * RpcStatus 中的 beginCount() 方法会在远程调用开始之前执行，
+     * 其中会从 SERVICE_STATISTICS 集合和 METHOD_STATISTICS 集合中获取服务和服务方法对应的 RpcStatus 对象，
+     * 然后分别将它们的 active 字段加一，相关实现如下：
+     *
      * @param url
      */
     public static boolean beginCount(URL url, String methodName, int max) {

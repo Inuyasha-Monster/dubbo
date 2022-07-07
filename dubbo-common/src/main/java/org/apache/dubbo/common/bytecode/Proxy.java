@@ -81,12 +81,14 @@ public abstract class Proxy {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < ics.length; i++) {
             String itf = ics[i].getName();
+            // 传入的必须是接口类，否则直接报错
             if (!ics[i].isInterface()) {
                 throw new RuntimeException(itf + " is not a interface.");
             }
 
             Class<?> tmp = null;
             try {
+                // 加载接口类，加载失败则直接报错
                 tmp = Class.forName(itf, false, cl);
             } catch (ClassNotFoundException e) {
             }
@@ -112,18 +114,22 @@ public abstract class Proxy {
             do {
                 Object value = cache.get(key);
                 if (value instanceof Reference<?>) {
+                    // 获取到WeakReference
                     proxy = (Proxy) ((Reference<?>) value).get();
                     if (proxy != null) {
+                        // 查找到缓存的代理类直接返回
                         return proxy;
                     }
                 }
 
                 if (value == PENDING_GENERATION_MARKER) {
                     try {
+                        // 阻塞等待其他线程生成好代理类，并添加到缓存中
                         cache.wait();
                     } catch (InterruptedException e) {
                     }
                 } else {
+                    // 设置占位符，由当前线程生成代理类
                     cache.put(key, PENDING_GENERATION_MARKER);
                     break;
                 }
@@ -192,6 +198,7 @@ public abstract class Proxy {
             ccp.addField("private " + InvocationHandler.class.getName() + " handler;");
             ccp.addConstructor(Modifier.PUBLIC, new Class<?>[]{InvocationHandler.class}, new Class<?>[0], "handler=$1;");
             ccp.addDefaultConstructor();
+            // 来动态生成代理类
             Class<?> clazz = ccp.toClass();
             clazz.getField("methods").set(null, methods.toArray(new Method[0]));
 
@@ -220,8 +227,10 @@ public abstract class Proxy {
                 if (proxy == null) {
                     cache.remove(key);
                 } else {
+                    // 添加到缓存中
                     cache.put(key, new WeakReference<Proxy>(proxy));
                 }
+                // 通知阻塞的线程
                 cache.notifyAll();
             }
         }

@@ -297,8 +297,10 @@ public final class ClassGenerator {
                 mClassName = (mSuperClass == null || javassist.Modifier.isPublic(ctcs.getModifiers())
                         ? ClassGenerator.class.getName() : mSuperClass + "$sc") + id;
             }
+            // 创建CtClass，用来生成代理类
             mCtc = mPool.makeClass(mClassName);
             if (mSuperClass != null) {
+                // 设置代理类的父类
                 mCtc.setSuperclass(ctcs);
             }
             mCtc.addInterface(mPool.get(DC.class.getName())); // add dynamic class tag.

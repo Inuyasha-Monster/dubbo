@@ -36,6 +36,17 @@ public class DefaultTPSLimiter implements TPSLimiter {
 
     private final ConcurrentMap<String, StatItem> stats = new ConcurrentHashMap<String, StatItem>();
 
+    /**
+     * TPSLimiter 接口中的核心是 isAllowable() 方法。在 DefaultTPSLimiter 实现中，
+     * 使用ConcurrentHashMap（stats 字段）为每个 ServiceKey 维护了一个相应的 StatItem 对象；
+     * 在 isAllowable() 方法实现中，会从 URL 中读取 tps 参数值（默认为 -1，即没有限流），
+     * 对于需要限流的请求，会从 stats 集合中获取（或创建）相应 StatItem 对象，
+     * 然后调用 StatItem 对象的isAllowable() 方法判断是否被限流，具体实现如下：
+     *
+     * @param url        url
+     * @param invocation invocation
+     * @return
+     */
     @Override
     public boolean isAllowable(URL url, Invocation invocation) {
         int rate = url.getParameter(TPS_LIMIT_RATE_KEY, -1);
@@ -55,6 +66,7 @@ public class DefaultTPSLimiter implements TPSLimiter {
             }
             return statItem.isAllowable();
         } else {
+            // 不需要限流，则从stats集合中清除相应的StatItem对象
             StatItem statItem = stats.get(serviceKey);
             if (statItem != null) {
                 stats.remove(serviceKey);

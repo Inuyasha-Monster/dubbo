@@ -46,6 +46,7 @@ public class ConsumerContextFilter implements Filter {
     @Override
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
         RpcContext context = RpcContext.getContext();
+        // 设置上下文关联信息
         context.setInvoker(invoker)
                 .setInvocation(invocation)
                 .setLocalAddress(NetUtils.getLocalHost(), 0)
@@ -60,6 +61,7 @@ public class ConsumerContextFilter implements Filter {
         Object countDown = context.get(TIME_COUNTDOWN_KEY);
         if (countDown != null) {
             TimeoutCountDown timeoutCountDown = (TimeoutCountDown) countDown;
+            // 判断是否超时
             if (timeoutCountDown.isExpired()) {
                 return AsyncRpcResult.newDefaultAsyncResult(new RpcException(RpcException.TIMEOUT_TERMINATE,
                         "No time left for making the following call: " + invocation.getServiceName() + "."
