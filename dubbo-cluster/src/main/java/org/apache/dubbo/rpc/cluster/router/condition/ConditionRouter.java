@@ -50,7 +50,6 @@ import static org.apache.dubbo.rpc.cluster.Constants.RUNTIME_KEY;
 
 /**
  * ConditionRouter
- *
  */
 public class ConditionRouter extends AbstractRouter {
     public static final String NAME = "condition";
@@ -85,6 +84,7 @@ public class ConditionRouter extends AbstractRouter {
             int i = rule.indexOf("=>");
             String whenRule = i < 0 ? null : rule.substring(0, i).trim();
             String thenRule = i < 0 ? rule.trim() : rule.substring(i + 2).trim();
+            // 解析whenRule和thenRule，得到whenCondition和thenCondition两个条件集合
             Map<String, MatchPair> when = StringUtils.isBlank(whenRule) || "true".equals(whenRule) ? new HashMap<String, MatchPair>() : parseRule(whenRule);
             Map<String, MatchPair> then = StringUtils.isBlank(thenRule) || "false".equals(thenRule) ? null : parseRule(thenRule);
             // NOTE: It should be determined on the business level whether the `When condition` can be empty or not.
@@ -165,6 +165,16 @@ public class ConditionRouter extends AbstractRouter {
         return condition;
     }
 
+    /**
+     * 进行条件过滤invokers
+     *
+     * @param invokers   invoker list
+     * @param url        refer url
+     * @param invocation invocation
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     public <T> List<Invoker<T>> route(List<Invoker<T>> invokers, URL url, Invocation invocation)
             throws RpcException {
@@ -176,6 +186,7 @@ public class ConditionRouter extends AbstractRouter {
             return invokers;
         }
         try {
+            // 判断此次发起调用的 Consumer 是否符合表达式中 => 之前的 Consumer 过滤条件，若不符合，直接返回整个 invokers 集合
             if (!matchWhen(url, invocation)) {
                 return invokers;
             }
@@ -262,6 +273,16 @@ public class ConditionRouter extends AbstractRouter {
         final Set<String> matches = new HashSet<String>();
         final Set<String> mismatches = new HashSet<String>();
 
+        /**
+         * 当 mismatches 集合为空的时候，会逐个遍历 matches 集合中的匹配条件，匹配成功任意一条即会返回 true。这里具体的匹配逻辑以及后续 mismatches 集合中条件的匹配逻辑，都是在 UrlUtils.isMatchGlobPattern() 方法中实现，其中完成了如下操作：如果匹配条件以 "$" 符号开头，则从 URL 中获取相应的参数值进行匹配；当遇到 "" 通配符的时候，会处理""通配符在匹配条件开头、中间以及末尾三种情况。
+         * 当 matches 集合为空的时候，会逐个遍历 mismatches 集合中的匹配条件，匹配成功任意一条即会返回 false。
+         * 当 matches 集合和 mismatches 集合同时不为空时，会优先匹配 mismatches 集合中的条件，成功匹配任意一条规则，就会返回 false；若 mismatches 中的条件全部匹配失败，才会开始匹配 matches 集合，成功匹配任意一条规则，就会返回 true。
+         * 当上述三个步骤都没有成功匹配时，直接返回 false。
+         *
+         * @param value
+         * @param param
+         * @return
+         */
         private boolean isMatch(String value, URL param) {
             if (!matches.isEmpty() && mismatches.isEmpty()) {
                 for (String match : matches) {

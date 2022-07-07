@@ -88,7 +88,6 @@ public class RouterChain<T> {
     }
 
     /**
-     *
      * @param url
      * @param invocation
      * @return
@@ -96,6 +95,7 @@ public class RouterChain<T> {
     public List<Invoker<T>> route(URL url, Invocation invocation) {
         List<Invoker<T>> finalInvokers = invokers;
         for (Router router : routers) {
+            // 循环每一个router执行route方法进行 invokers 的过滤
             finalInvokers = router.route(finalInvokers, url, invocation);
         }
         return finalInvokers;
