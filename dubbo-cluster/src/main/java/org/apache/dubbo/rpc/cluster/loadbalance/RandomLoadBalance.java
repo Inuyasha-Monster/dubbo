@@ -37,8 +37,9 @@ public class RandomLoadBalance extends AbstractLoadBalance {
 
     /**
      * Select one invoker between a list using a random criteria
-     * @param invokers List of possible invokers
-     * @param url URL
+     *
+     * @param invokers   List of possible invokers
+     * @param url        URL
      * @param invocation Invocation
      * @param <T>
      * @return The selected invoker
@@ -62,14 +63,18 @@ public class RandomLoadBalance extends AbstractLoadBalance {
             weights[i] = weight;
             // Sum
             totalWeight += weight;
+            // 判定是否具有一样的权重值
             if (sameWeight && weight != firstWeight) {
                 sameWeight = false;
             }
         }
+        // 各个Invoker权重值不相等时，计算随机数落在哪个区间上
         if (totalWeight > 0 && !sameWeight) {
             // If (not every invoker has the same weight & at least one invoker's weight>0), select randomly based on totalWeight.
+            // 随机获取一个[0, totalWeight) 区间内的数字
             int offset = ThreadLocalRandom.current().nextInt(totalWeight);
             // Return a invoker based on the random value.
+            // 循环让offset数减去Invoker的权重值，当offset小于0时，返回相应的Invoker
             for (int i = 0; i < length; i++) {
                 offset -= weights[i];
                 if (offset < 0) {
@@ -78,6 +83,7 @@ public class RandomLoadBalance extends AbstractLoadBalance {
             }
         }
         // If all invokers have the same weight value or totalWeight=0, return evenly.
+        // 各个Invoker权重值相同时，随机返回一个Invoker即可
         return invokers.get(ThreadLocalRandom.current().nextInt(length));
     }
 
