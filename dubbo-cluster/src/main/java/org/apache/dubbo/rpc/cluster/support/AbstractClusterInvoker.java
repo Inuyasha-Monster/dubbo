@@ -136,6 +136,8 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
         }
         String methodName = invocation == null ? StringUtils.EMPTY_STRING : invocation.getMethodName();
 
+        // 获取sticky配置，sticky表示粘滞连接，所谓粘滞连接是指Consumer会尽可能地
+        // 调用同一个Provider节点，除非这个Provider无法提供服务
         boolean sticky = invokers.get(0).getUrl()
                 .getMethodParameter(methodName, CLUSTER_STICKY_KEY, DEFAULT_CLUSTER_STICKY);
 
@@ -253,6 +255,7 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
             ((RpcInvocation) invocation).addObjectAttachments(contextAttachments);
         }
 
+        // 通过Directory获取Invoker对象列表，通过对RegistryDirectory的介绍我们知道，其中已经调用了Router进行过滤
         List<Invoker<T>> invokers = list(invocation);
         LoadBalance loadbalance = initLoadBalance(invokers, invocation);
         RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation);

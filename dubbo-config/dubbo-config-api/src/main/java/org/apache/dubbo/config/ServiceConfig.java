@@ -425,7 +425,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
         /**
          * Here the token value configured by the provider is used to assign the value to ServiceConfig#token
          */
-        if(ConfigUtils.isEmpty(token) && provider != null) {
+        if (ConfigUtils.isEmpty(token) && provider != null) {
             token = provider.getToken();
         }
 
@@ -451,19 +451,25 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                     .getExtension(url.getProtocol()).getConfigurator(url).configure(url);
         }
 
+        // 从URL中获取scope参数，其中可选值有none、remote、local三个，
+        // 分别代表不发布、发布到本地以及发布到远端，具体含义在下面一一介绍
         String scope = url.getParameter(SCOPE_KEY);
         // don't export when none is configured
         if (!SCOPE_NONE.equalsIgnoreCase(scope)) {
 
             // export to local if the config is not remote (export to remote only when config is remote)
             if (!SCOPE_REMOTE.equalsIgnoreCase(scope)) {
+                // 本地暴露
                 exportLocal(url);
             }
             // export to remote if the config is not local (export to local only when config is local)
             if (!SCOPE_LOCAL.equalsIgnoreCase(scope)) {
                 if (CollectionUtils.isNotEmpty(registryURLs)) {
+                    // 远程暴露
                     for (URL registryURL : registryURLs) {
                         //if protocol is only injvm ,not register
+                        // injvm协议只在exportLocal()中有用，不会将服务发布到注册中心
+                        // 所以这里忽略injvm协议
                         if (LOCAL_PROTOCOL.equalsIgnoreCase(url.getProtocol())) {
                             continue;
                         }
@@ -706,7 +712,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
     }
 
     private void postProcessConfig() {
-        List<ConfigPostProcessor> configPostProcessors =ExtensionLoader.getExtensionLoader(ConfigPostProcessor.class)
+        List<ConfigPostProcessor> configPostProcessors = ExtensionLoader.getExtensionLoader(ConfigPostProcessor.class)
                 .getActivateExtension(URL.valueOf("configPostProcessor://"), (String[]) null);
         configPostProcessors.forEach(component -> component.postProcessServiceConfig(this));
     }

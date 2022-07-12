@@ -100,9 +100,9 @@ import static org.apache.dubbo.remoting.Constants.CLIENT_KEY;
 
 /**
  * See {@link ApplicationModel} and {@link ExtensionLoader} for why this class is designed to be singleton.
- *
+ * <p>
  * The bootstrap class of Dubbo
- *
+ * <p>
  * Get singleton instance by calling static method {@link #getInstance()}.
  * Designed as singleton because some classes inside Dubbo, such as ExtensionLoader, are designed only for one instance per process.
  *
@@ -746,6 +746,7 @@ public class DubboBootstrap extends GenericEventListener {
                 logger.info(NAME + " is starting...");
             }
             // 1. export Dubbo Services
+            // 服务发布核心逻辑的入口
             exportServices();
 
             // Not only provider register
@@ -927,12 +928,14 @@ public class DubboBootstrap extends GenericEventListener {
     }
 
     private void exportServices() {
+        // 从配置管理器中获取到所有的要暴露的服务配置，一个接口类对应一个ServiceConfigBase实例
         configManager.getServices().forEach(sc -> {
             // TODO, compatible with ServiceConfig.export()
             ServiceConfig serviceConfig = (ServiceConfig) sc;
             serviceConfig.setBootstrap(this);
 
             if (exportAsync) {
+                // 异步模式，获取一个线程池来异步执行服务发布逻辑
                 ExecutorService executor = executorRepository.getServiceExporterExecutor();
                 Future<?> future = executor.submit(() -> {
                     sc.export();
@@ -940,6 +943,7 @@ public class DubboBootstrap extends GenericEventListener {
                 });
                 asyncExportingFutures.add(future);
             } else {
+                // 同步发布
                 sc.export();
                 exportedServices.add(sc);
             }

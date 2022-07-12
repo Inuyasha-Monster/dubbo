@@ -88,7 +88,9 @@ public abstract class AbstractCluster implements Cluster {
         public Result invoke(Invocation invocation) throws RpcException {
             Result asyncResult;
             try {
+                // 前置逻辑
                 interceptor.before(next, invocation);
+                // 执行invoke()方法完成远程调用
                 asyncResult = interceptor.intercept(next, invocation);
             } catch (Exception e) {
                 // onError callback
@@ -105,6 +107,7 @@ public abstract class AbstractCluster implements Cluster {
                 if (interceptor instanceof ClusterInterceptor.Listener) {
                     ClusterInterceptor.Listener listener = (ClusterInterceptor.Listener) interceptor;
                     if (t == null) {
+                        // 正常返回时，会调用onMessage()方法触发监听器
                         listener.onMessage(r, clusterInvoker, invocation);
                     } else {
                         listener.onError(t, clusterInvoker, invocation);

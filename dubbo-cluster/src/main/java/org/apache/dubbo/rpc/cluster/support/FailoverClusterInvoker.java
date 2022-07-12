@@ -76,6 +76,7 @@ public class FailoverClusterInvoker<T> extends AbstractClusterInvoker<T> {
                 checkInvokers(copyInvokers, invocation);
             }
             Invoker<T> invoker = select(loadbalance, invocation, copyInvokers, invoked);
+            // 记录此次要尝试调用的Invoker对象，下一次重试时就会过滤这个服务
             invoked.add(invoker);
             RpcContext.getContext().setInvokers((List) invoked);
             try {

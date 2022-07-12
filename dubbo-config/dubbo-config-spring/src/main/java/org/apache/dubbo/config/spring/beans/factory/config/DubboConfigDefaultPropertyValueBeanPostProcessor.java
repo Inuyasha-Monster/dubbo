@@ -49,7 +49,7 @@ public class DubboConfigDefaultPropertyValueBeanPostProcessor extends GenericBea
     /**
      * The bean name of {@link DubboConfigDefaultPropertyValueBeanPostProcessor}
      */
-    public static final String BEAN_NAME = "dubboConfigDefaultPropertyValueBeanPostProcessor";
+    public static final StrinInjvmProtocolg BEAN_NAME = "dubboConfigDefaultPropertyValueBeanPostProcessor";
 
     protected void processBeforeInitialization(AbstractConfig dubboConfigBean, String beanName) throws BeansException {
         // [Feature] https://github.com/apache/dubbo/issues/5721
