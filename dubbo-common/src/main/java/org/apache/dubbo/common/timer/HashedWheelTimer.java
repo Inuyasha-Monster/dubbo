@@ -89,9 +89,11 @@ public class HashedWheelTimer implements Timer {
 
     private static final Logger logger = LoggerFactory.getLogger(HashedWheelTimer.class);
 
+    // 实例计数器
     private static final AtomicInteger INSTANCE_COUNTER = new AtomicInteger();
     private static final AtomicBoolean WARNED_TOO_MANY_INSTANCES = new AtomicBoolean();
     private static final int INSTANCE_COUNT_LIMIT = 64;
+
     private static final AtomicIntegerFieldUpdater<HashedWheelTimer> WORKER_STATE_UPDATER =
         AtomicIntegerFieldUpdater.newUpdater(HashedWheelTimer.class, "workerState");
 
@@ -110,22 +112,27 @@ public class HashedWheelTimer implements Timer {
 
     private final long tickDuration;
 
-    //  时间轮环形队列，每个元素都是一个槽。当指定时间轮槽数为 n 时，会向上取最靠近 n 的 2 次幂值
+    //  时间轮环形队列，每个元素都是一个槽。当指定时间轮槽数为 n 时，会向上取最靠近 n 的 2 次幂值，例如 6 会向上取数为 8
     private final HashedWheelBucket[] wheel;
 
+    // 其值为：wheel.length - 1
     private final int mask;
     private final CountDownLatch startTimeInitialized = new CountDownLatch(1);
 
-    // 队列 缓冲外部提交时间轮中的定时任务，为什么？因为外部添加任务很快就可以返回，内部worker单线程把任务添加到桶里，实现读写分离
+    // 队列 缓冲外部提交时间轮中的定时任务，为什么？
+    // 回答：因为外部添加任务很快就可以返回，内部worker单线程把任务添加到桶里，实现读写分离
     private final Queue<HashedWheelTimeout> timeouts = new LinkedBlockingQueue<>();
 
-    // 队列 暂存取消的定时任务
+    // 队列 暂存取消的定时任务，桶里外部取消任务可以快速返回，由 worker把任务从桶里面移除
     private final Queue<HashedWheelTimeout> cancelledTimeouts = new LinkedBlockingQueue<>();
 
+    // 等待超时的任务总数
     private final AtomicLong pendingTimeouts = new AtomicLong(0);
+    // <=0 表示没有限制
     private final long maxPendingTimeouts;
 
     // 当前时间轮的启动时间，提交到该时间轮的定时任务的 deadline 字段值均以该时间戳为起点进行计算。
+    // deadline = system.currentTimeMillis() - startTime
     private volatile long startTime;
 
     /**
@@ -175,6 +182,7 @@ public class HashedWheelTimer implements Timer {
      * @throws NullPointerException if {@code threadFactory} is {@code null}
      */
     public HashedWheelTimer(ThreadFactory threadFactory) {
+        // 默认构造函数单位刻度为100ms
         this(threadFactory, 100, TimeUnit.MILLISECONDS);
     }
 
@@ -191,6 +199,7 @@ public class HashedWheelTimer implements Timer {
      */
     public HashedWheelTimer(
         ThreadFactory threadFactory, long tickDuration, TimeUnit unit) {
+        // 默认512个槽为
         this(threadFactory, tickDuration, unit, 512);
     }
 
@@ -209,6 +218,7 @@ public class HashedWheelTimer implements Timer {
     public HashedWheelTimer(
         ThreadFactory threadFactory,
         long tickDuration, TimeUnit unit, int ticksPerWheel) {
+        // 默认等到任务没有上限
         this(threadFactory, tickDuration, unit, ticksPerWheel, -1);
     }
 
@@ -245,14 +255,17 @@ public class HashedWheelTimer implements Timer {
         }
 
         // Normalize ticksPerWheel to power of two and initialize the wheel.
+        // 向上取数为2的次方后创建并初始化数组
         wheel = createWheel(ticksPerWheel);
         // 执行 ticks & mask 便能定位到对应的时钟槽
         mask = wheel.length - 1;
 
         // Convert tickDuration to nanos.
+        // 将最小单位的时间刻度转为纳秒
         this.tickDuration = unit.toNanos(tickDuration);
 
         // Prevent overflow.
+        // 检查是否刻度太大
         if (this.tickDuration >= Long.MAX_VALUE / wheel.length) {
             throw new IllegalArgumentException(String.format(
                 "tickDuration: %d (expected: 0 < tickDuration in nanos < %d",
@@ -290,8 +303,9 @@ public class HashedWheelTimer implements Timer {
             throw new IllegalArgumentException(
                 "ticksPerWheel may not be greater than 2^30: " + ticksPerWheel);
         }
-
+        // 向上取数为2的次方
         ticksPerWheel = normalizeTicksPerWheel(ticksPerWheel);
+        // 初始化数组
         HashedWheelBucket[] wheel = new HashedWheelBucket[ticksPerWheel];
         for (int i = 0; i < wheel.length; i++) {
             wheel[i] = new HashedWheelBucket();
@@ -376,6 +390,7 @@ public class HashedWheelTimer implements Timer {
         } finally {
             INSTANCE_COUNTER.decrementAndGet();
         }
+        // 返回还没执行过的超时任务
         return worker.unprocessedTimeouts();
     }
 
@@ -395,6 +410,7 @@ public class HashedWheelTimer implements Timer {
 
         long pendingTimeoutsCount = pendingTimeouts.incrementAndGet();
 
+        // 检查是否超过最大任务数量
         if (maxPendingTimeouts > 0 && pendingTimeoutsCount > maxPendingTimeouts) {
             pendingTimeouts.decrementAndGet();
             throw new RejectedExecutionException("Number of pending timeouts ("
@@ -402,6 +418,7 @@ public class HashedWheelTimer implements Timer {
                 + "timeouts (" + maxPendingTimeouts + ")");
         }
 
+        // 如果没有启动则启动worker线程
         start();
 
         // Add the timeout to the timeout queue which will be processed on the next tick.
@@ -412,6 +429,7 @@ public class HashedWheelTimer implements Timer {
         if (delay > 0 && deadline < 0) {
             deadline = Long.MAX_VALUE;
         }
+        // 构建延时任务
         HashedWheelTimeout timeout = new HashedWheelTimeout(this, task, deadline);
         // 将添加的定时任务缓存起来
         timeouts.add(timeout);
@@ -454,20 +472,23 @@ public class HashedWheelTimer implements Timer {
                 // 等待下一个时刻，返回过期时刻
                 final long deadline = waitForNextTick();
                 if (deadline > 0) {
+                    // 计算槽位
                     int idx = (int) (tick & mask);
-                    // 先从cancelledTimeouts获取已经取消的定时任务进行处理，实际上就是从桶中移除
+                    // 先从cancelledTimeouts获取已经取消的定时任务进行处理，实际上就是从桶中移除任务
                     processCancelledTasks();
                     // 找到对应的桶
                     HashedWheelBucket bucket = wheel[idx];
                     // 将外部的超时任务转移到桶里面
                     transferTimeoutsToBuckets();
-                    // 触发对应桶里面超时的任务执行
+                    // 关键：触发对应桶里面超时的任务执行
                     bucket.expireTimeouts(deadline);
+                    // 指针移动一位
                     tick++;
                 }
             } while (WORKER_STATE_UPDATER.get(HashedWheelTimer.this) == WORKER_STATE_STARTED);
 
             // Fill the unprocessedTimeouts so we can return them from stop() method.
+            // 将桶里剩余没执行的任务填充到 unprocessedTimeouts
             for (HashedWheelBucket bucket : wheel) {
                 bucket.clearTimeouts(unprocessedTimeouts);
             }
@@ -482,12 +503,18 @@ public class HashedWheelTimer implements Timer {
                     unprocessedTimeouts.add(timeout);
                 }
             }
+            // 再次触发取消任务的移除逻辑
             processCancelledTasks();
         }
 
+        /**
+         * 将外部添加的超时任务加入到对应的桶里面
+         */
         private void transferTimeoutsToBuckets() {
             // transfer only max. 100000 timeouts per tick to prevent a thread to stale the workerThread when it just
             // adds new timeouts in a loop.
+
+            // 一次性最多处理10w个，防止worker线程耗时太久
             for (int i = 0; i < 100000; i++) {
                 HashedWheelTimeout timeout = timeouts.poll();
                 if (timeout == null) {
@@ -499,14 +526,19 @@ public class HashedWheelTimer implements Timer {
                     continue;
                 }
 
+                // 计算总的滴答数量
                 long calculated = timeout.deadline / tickDuration;
+                // 计算当前任务的圈数，例如：10个槽，单位刻度为1s，任务延时15s
                 timeout.remainingRounds = (calculated - tick) / wheel.length;
 
                 // Ensure we don't schedule for past.
+                // 防止添加超时任务超时时间小于时间刻度，直接加入当前槽位的桶里面
                 final long ticks = Math.max(calculated, tick);
+                // 找到当前任务的槽位
                 int stopIndex = (int) (ticks & mask);
-
+                // 获取桶
                 HashedWheelBucket bucket = wheel[stopIndex];
+                // 加入到链表尾部
                 bucket.addTimeout(timeout);
             }
         }
@@ -519,6 +551,7 @@ public class HashedWheelTimer implements Timer {
                     break;
                 }
                 try {
+                    // 桶里移除该任务，其实就是断开指针
                     timeout.remove();
                 } catch (Throwable t) {
                     if (logger.isWarnEnabled()) {
@@ -531,6 +564,7 @@ public class HashedWheelTimer implements Timer {
         /**
          * calculate goal nanoTime from startTime and current tick number,
          * then wait until that goal has been reached.
+         * 等待一次滴答的时间，然后返回：当前时间 - startTime
          *
          * @return Long.MIN_VALUE if received a shutdown request,
          * current time otherwise (with Long.MIN_VALUE changed by +1)
@@ -540,7 +574,9 @@ public class HashedWheelTimer implements Timer {
 
             // 无限循环
             for (; ; ) {
+
                 final long currentTime = System.nanoTime() - startTime;
+                // TODO: 2022/7/16 why?
                 long sleepTimeMs = (deadline - currentTime + 999999) / 1000000;
 
                 if (sleepTimeMs <= 0) {
@@ -550,6 +586,9 @@ public class HashedWheelTimer implements Timer {
                         return currentTime;
                     }
                 }
+
+                // netty 以及 jraft 中对于该代码的处理不一样
+                // TODO: 2022/7/16 了解清楚
                 if (isWindows()) {
                     sleepTimeMs = sleepTimeMs / 10 * 10;
                 }
@@ -664,6 +703,7 @@ public class HashedWheelTimer implements Timer {
             }
 
             try {
+                // 执行超时任务
                 task.run(this);
             } catch (Throwable t) {
                 if (logger.isWarnEnabled()) {
@@ -738,10 +778,13 @@ public class HashedWheelTimer implements Timer {
             HashedWheelTimeout timeout = head;
 
             // process all timeouts
+            // 从头节点开始扫描整个链表
             while (timeout != null) {
                 HashedWheelTimeout next = timeout.next;
                 if (timeout.remainingRounds <= 0) {
+                    // 移除该任务，返回下一个任务赋值给next指针
                     next = remove(timeout);
+                    // 如果当前任务死亡时间小于等于当前死亡时间，则表示超时时间已到，执行该挂载的任务
                     if (timeout.deadline <= deadline) {
                         timeout.expire();
                     } else {
@@ -750,15 +793,19 @@ public class HashedWheelTimer implements Timer {
                             "timeout.deadline (%d) > deadline (%d)", timeout.deadline, deadline));
                     }
                 } else if (timeout.isCancelled()) {
+                    // 如果当前任务已经取消则移除该任务，返回下一个任务赋值给 next 指针
                     next = remove(timeout);
                 } else {
+                    // 当前任务圈数减1
                     timeout.remainingRounds--;
                 }
+                // 处理下一个任务
                 timeout = next;
             }
         }
 
         public HashedWheelTimeout remove(HashedWheelTimeout timeout) {
+            // 暂存当前任务的下一个next指针，用于返回值
             HashedWheelTimeout next = timeout.next;
             // remove timeout that was either processed or cancelled by updating the linked-list
             if (timeout.prev != null) {
