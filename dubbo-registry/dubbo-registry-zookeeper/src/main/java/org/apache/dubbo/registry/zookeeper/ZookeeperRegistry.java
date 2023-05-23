@@ -171,7 +171,16 @@ public class ZookeeperRegistry extends FailbackRegistry {
                 // 获取需要监听的分类数据，这里要订阅 providers、configurators 以及 routers 三个分类
                 for (String path : toCategoriesPath(url)) {
                     ConcurrentMap<NotifyListener, ChildListener> listeners = zkListeners.computeIfAbsent(url, k -> new ConcurrentHashMap<>());
-                    ChildListener zkListener = listeners.computeIfAbsent(listener, k -> (parentPath, currentChilds) -> ZookeeperRegistry.this.notify(url, k, toUrlsWithEmpty(url, parentPath, currentChilds)));
+
+                    // 构造zk监听器
+                    ChildListener zkListener = listeners.computeIfAbsent(listener,
+                            notifyListener -> (parentPath, currentChilds) -> {
+                                ZookeeperRegistry.this.notify(
+                                        url,
+                                        notifyListener,
+                                        toUrlsWithEmpty(url, parentPath, currentChilds));
+                            });
+
                     zkClient.create(path, false);
                     // 设置对于path路径的zk的监听器
                     List<String> children = zkClient.addChildListener(path, zkListener);

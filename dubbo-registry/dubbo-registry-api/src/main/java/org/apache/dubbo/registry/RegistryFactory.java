@@ -22,6 +22,7 @@ import org.apache.dubbo.common.extension.SPI;
 
 /**
  * RegistryFactory. (SPI, Singleton, ThreadSafe)
+ * 首先会根据url中的protocol来决定选择哪一种注册方式，否则默认是dubbo注册进行兜底
  *
  * @see org.apache.dubbo.registry.support.AbstractRegistryFactory
  */
