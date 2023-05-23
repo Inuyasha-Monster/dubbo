@@ -24,6 +24,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * 实现业务接口
+ */
 public class DemoServiceImpl implements DemoService {
     private static final Logger logger = LoggerFactory.getLogger(DemoServiceImpl.class);
 
@@ -41,12 +44,12 @@ public class DemoServiceImpl implements DemoService {
     @Override
     public CompletableFuture<String> sayHelloAsync(String name) {
         CompletableFuture<String> cf = CompletableFuture.supplyAsync(() -> {
-//            try {
-//                Thread.sleep(1000);
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
-            return "async result";
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            return "async result：" + name;
         });
         return cf;
     }

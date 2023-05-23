@@ -48,14 +48,14 @@ public class Application {
                 .reference(reference)
                 .start();
 
+        // 获取DemoService实例并调用其方法
         DemoService demoService = ReferenceConfigCache.getCache().get(reference);
         String message = demoService.sayHello("dubbo");
         System.out.println(message);
 
         // generic invoke
         GenericService genericService = (GenericService) demoService;
-        Object genericInvokeResult = genericService.$invoke("sayHello", new String[] { String.class.getName() },
-                new Object[] { "dubbo generic invoke" });
+        Object genericInvokeResult = genericService.$invoke("sayHello", new String[]{String.class.getName()}, new Object[]{"dubbo generic invoke"});
         System.out.println(genericInvokeResult);
     }
 

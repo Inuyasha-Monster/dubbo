@@ -33,6 +33,7 @@
     </properties>
 
     <dependencies>
+        <!-- 依赖业务接口 -->
         <dependency>
             <groupId>org.apache.dubbo</groupId>
             <artifactId>dubbo-demo-interface</artifactId>

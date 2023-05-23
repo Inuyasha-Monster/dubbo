@@ -25,6 +25,10 @@ import java.util.concurrent.CompletableFuture;
 
 @Component("demoServiceComponent")
 public class DemoServiceComponent implements DemoService {
+
+    /**
+     * 关键：注入dubbo的远程服务
+     */
     @Reference
     private DemoService demoService;
 
