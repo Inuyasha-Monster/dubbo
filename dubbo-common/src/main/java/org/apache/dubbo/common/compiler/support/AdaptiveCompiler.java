@@ -22,6 +22,7 @@ import org.apache.dubbo.common.extension.ExtensionLoader;
 
 /**
  * AdaptiveCompiler. (SPI, Singleton, ThreadSafe)
+ * 标记了@Adaptive则会作为当前接口的默认使用扩展实现，实际也是通过javassist来实现
  */
 @Adaptive
 public class AdaptiveCompiler implements Compiler {
@@ -40,6 +41,7 @@ public class AdaptiveCompiler implements Compiler {
         if (name != null && name.length() > 0) {
             compiler = loader.getExtension(name);
         } else {
+            // 加载默认的java代码编译器 javassist
             compiler = loader.getDefaultExtension();
         }
         return compiler.compile(code, classLoader);

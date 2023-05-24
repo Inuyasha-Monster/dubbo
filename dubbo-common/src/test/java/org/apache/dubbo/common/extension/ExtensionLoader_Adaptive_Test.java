@@ -55,6 +55,7 @@ public class ExtensionLoader_Adaptive_Test {
     @Test
     public void test_getAdaptiveExtension_defaultAdaptiveKey() throws Exception {
         {
+            // ext 对象实际为  SimpleExtImpl1，走了默认的 @SPI的标注值
             SimpleExt ext = ExtensionLoader.getExtensionLoader(SimpleExt.class).getAdaptiveExtension();
 
             Map<String, String> map = new HashMap<String, String>();
@@ -68,6 +69,7 @@ public class ExtensionLoader_Adaptive_Test {
             SimpleExt ext = ExtensionLoader.getExtensionLoader(SimpleExt.class).getAdaptiveExtension();
 
             Map<String, String> map = new HashMap<String, String>();
+            // key这里有一定的约定，SimpleExt =》simple.ext，这里指定了 impl2 所以这里的 ext 可以认为为 SimpleExtImpl2
             map.put("simple.ext", "impl2");
             URL url = new URL("p1", "1.2.3.4", 1010, "path1", map);
 
@@ -87,6 +89,7 @@ public class ExtensionLoader_Adaptive_Test {
         String echo = ext.yell(url, "haha");
         assertEquals("Ext1Impl2-yell", echo);
 
+        // 优先使用key1指定的value值作为实现类的扩展名称
         url = url.addParameter("key1", "impl3"); // note: URL is value's type
         echo = ext.yell(url, "haha");
         assertEquals("Ext1Impl3-yell", echo);

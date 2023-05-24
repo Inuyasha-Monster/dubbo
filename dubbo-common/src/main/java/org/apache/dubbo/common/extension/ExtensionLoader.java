@@ -96,6 +96,7 @@ public class ExtensionLoader<T> {
 
     /**
      * 当前 ExtensionLoader 实例负责加载扩展接口
+     * 例如：org.apache.dubbo.common.extension.ext1.SimpleExt
      */
     private final Class<?> type;
 
@@ -108,6 +109,7 @@ public class ExtensionLoader<T> {
 
     /**
      * 缓存了该 ExtensionLoader 加载的扩展名与扩展实现类之间的映射关系。cachedNames 集合的反向关系缓存。
+     * 例如：key=impl1，value=class org.apache.dubbo.common.extension.ext1.impl.SimpleExtImpl1
      */
     private final Holder<Map<String, Class<?>>> cachedClasses = new Holder<>();
 
@@ -826,6 +828,7 @@ public class ExtensionLoader<T> {
 
             loadDirectory(extensionClasses,
                     strategy.directory(),
+                    // 根据接口的全名称进行搜索
                     type.getName(),
                     strategy.preferExtensionClassLoader(),
                     strategy.overridden(),
@@ -892,7 +895,7 @@ public class ExtensionLoader<T> {
 
             if (urls == null || !urls.hasMoreElements()) {
                 if (classLoader != null) {
-                    // 从配置文件加载
+                    // 从配置文件加载，例如：META-INF/dubbo 目录，然后具体的文件例如为：META-INF/dubbo/internal/org.apache.dubbo.common.extension.ext1.SimpleExt
                     urls = classLoader.getResources(fileName);
                 } else {
                     urls = ClassLoader.getSystemResources(fileName);
@@ -988,9 +991,9 @@ public class ExtensionLoader<T> {
             if (ArrayUtils.isNotEmpty(names)) {
                 cacheActivateClass(clazz, names[0]);
                 for (String n : names) {
-                    // 在cachedNames集合中缓存实现类->扩展名的映射
+                    // 在cachedNames集合中缓存：实现类->扩展名的映射
                     cacheName(clazz, n);
-                    // 在cachedClasses集合中缓存扩展名->实现类的映射
+                    // 在cachedClasses集合中缓存：扩展名->实现类的映射
                     saveInExtensionClass(extensionClasses, clazz, n, overridden);
                 }
             }
@@ -1111,10 +1114,12 @@ public class ExtensionLoader<T> {
     }
 
     private Class<?> getAdaptiveExtensionClass() {
+        // 加载对应接口类型的实现类的Class缓存起来
         getExtensionClasses();
         if (cachedAdaptiveClass != null) {
             return cachedAdaptiveClass;
         }
+        // 创建自适应的代理实现类
         return cachedAdaptiveClass = createAdaptiveExtensionClass();
     }
 
@@ -1124,9 +1129,11 @@ public class ExtensionLoader<T> {
      * @return
      */
     private Class<?> createAdaptiveExtensionClass() {
+        // 直接生成java代码
         String code = new AdaptiveClassCodeGenerator(type, cachedDefaultName).generate();
         ClassLoader classLoader = findClassLoader();
         org.apache.dubbo.common.compiler.Compiler compiler = ExtensionLoader.getExtensionLoader(org.apache.dubbo.common.compiler.Compiler.class).getAdaptiveExtension();
+        // 通过AdaptiveCompiler内部然后再通过默认的方法javassist将java代码生成为具体的class对象
         return compiler.compile(code, classLoader);
     }
 

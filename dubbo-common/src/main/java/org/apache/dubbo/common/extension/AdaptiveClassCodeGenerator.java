@@ -214,6 +214,7 @@ public class AdaptiveClassCodeGenerator {
                 code.append(generateUrlAssignmentIndirectly(method));
             }
 
+            // 获取@Adaptive注解的字符串数组
             String[] value = getMethodAdaptiveValue(adaptiveAnnotation);
 
             boolean hasInvocation = hasInvocationArgument(method);
@@ -330,6 +331,7 @@ public class AdaptiveClassCodeGenerator {
         String[] value = adaptiveAnnotation.value();
         // value is not set, use the value generated from class name as the key
         if (value.length == 0) {
+            // 如果@Adaptive没有指定key的话，则使用根据接口简单名称进行生成，驼峰+点分隔的方式
             String splitName = StringUtils.camelToSplitName(type.getSimpleName(), ".");
             value = new String[]{splitName};
         }
