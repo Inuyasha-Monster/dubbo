@@ -24,6 +24,7 @@ import static org.apache.dubbo.common.extension.ExtensionLoader.getExtensionLoad
 
 /**
  * The factory interface to create the instance of {@link DynamicConfiguration}
+ * 动态配置工厂用于创建实际的动态配置中心,例如:zk,nacos等,用于动态调整rpc在运行时相关的配置
  */
 @SPI("nop") // 2.7.5 change the default SPI implementation
 public interface DynamicConfigurationFactory {
