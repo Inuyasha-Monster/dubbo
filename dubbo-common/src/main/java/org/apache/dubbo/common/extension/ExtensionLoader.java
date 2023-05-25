@@ -90,7 +90,7 @@ public class ExtensionLoader<T> {
     private static final ConcurrentMap<Class<?> /*interface class*/, ExtensionLoader<?>> EXTENSION_LOADERS = new ConcurrentHashMap<>(64);
 
     /**
-     * SPI接口类型对应的一个实现类，Key 为 Class，Value 为 DubboProtocol 对象。
+     * SPI接口类型对应的一个实现类，Key 为 Class，Value 为 DubboProtocol 对象(具体实现类实例)。
      */
     private static final ConcurrentMap<Class<?>, Object> EXTENSION_INSTANCES = new ConcurrentHashMap<>(64);
 
@@ -141,6 +141,7 @@ public class ExtensionLoader<T> {
     /**
      * 有三种实现，分别对应三个扩展加载文件目录，且都继承了 Prioritized 这个优先级接口
      * 默认优先级： DubboInternalLoadingStrategy > DubboLoadingStrategy > ServicesLoadingStrateg
+     * 内部通过jdk的spi机制进行加载实现类集合
      */
     private static volatile LoadingStrategy[] strategies = loadLoadingStrategies();
 
@@ -668,6 +669,12 @@ public class ExtensionLoader<T> {
         return new IllegalStateException(buf.toString());
     }
 
+    /**
+     * 根据扩展名创建或者获取对应的实现实例
+     *
+     * @param name
+     * @return
+     */
     @SuppressWarnings("unchecked")
     private T createExtension(String name) {
         /*
@@ -683,7 +690,7 @@ public class ExtensionLoader<T> {
         try {
             T instance = (T) EXTENSION_INSTANCES.get(clazz);
             if (instance == null) {
-                // 反射创建对象加入缓存池
+                // 反射调用ctor构造器创建对象加入缓存池
                 EXTENSION_INSTANCES.putIfAbsent(clazz, clazz.newInstance());
                 instance = (T) EXTENSION_INSTANCES.get(clazz);
             }
@@ -740,6 +747,7 @@ public class ExtensionLoader<T> {
                 }
 
                 try {
+                    // 从方法名字获取需要填充属性的扩展名,例如:set方法是setVersion,那么 property = "version"
                     String property = getSetterProperty(method);
                     // 再次通过扩展假加载器进行实例获取
                     Object object = objectFactory.getExtension(pt, property);
@@ -972,7 +980,7 @@ public class ExtensionLoader<T> {
                     type + ", class line: " + clazz.getName() + "), class "
                     + clazz.getName() + " is not subtype of interface.");
         }
-        // 识别自适应注解
+        // 识别自适应注解,将标注了该注解的扩展实现作为自适应的扩展实现类,也就是说 getAdaptiveExtension 获取的就是该class的对象实例
         if (clazz.isAnnotationPresent(Adaptive.class)) {
             cacheAdaptiveClass(clazz, overridden);
         } else if (isWrapperClass(clazz)) { // 如果是包装类，进行缓存该类型到wrapper中
@@ -1114,13 +1122,20 @@ public class ExtensionLoader<T> {
         }
     }
 
+    /**
+     * 1.如果存在 @Adaptive 注解修饰的扩展实现类，该类就是适配器类，通过 newInstance() 将其实例化即可。
+     * 2.如果不存在 @Adaptive 注解修饰的扩展实现类，就需要通过 createAdaptiveExtensionClass() 方法扫描扩展接口中方法上的 @Adaptive 注解，
+     *   动态生成适配器类，然后实例化。
+     * @return
+     */
     private Class<?> getAdaptiveExtensionClass() {
         // 加载对应接口类型的实现类的Class缓存起来
         getExtensionClasses();
+        // 如果存在自定义标注的class则优先使用(直接返回该class)
         if (cachedAdaptiveClass != null) {
             return cachedAdaptiveClass;
         }
-        // 创建自适应的代理实现类
+        // 否则创建自适应的代理实现类(内部会通过判断url以及@SPI注解的默认值来进行Class的选择)
         return cachedAdaptiveClass = createAdaptiveExtensionClass();
     }
 
@@ -1133,6 +1148,7 @@ public class ExtensionLoader<T> {
         // 直接生成java代码
         String code = new AdaptiveClassCodeGenerator(type, cachedDefaultName).generate();
         ClassLoader classLoader = findClassLoader();
+        // 获取自适应的扩展实现类
         org.apache.dubbo.common.compiler.Compiler compiler = ExtensionLoader.getExtensionLoader(org.apache.dubbo.common.compiler.Compiler.class).getAdaptiveExtension();
         // 通过AdaptiveCompiler内部然后再通过默认的方法javassist将java代码生成为具体的class对象
         return compiler.compile(code, classLoader);
