@@ -989,6 +989,7 @@ public class ExtensionLoader<T> {
 
             String[] names = NAME_SEPARATOR.split(name);
             if (ArrayUtils.isNotEmpty(names)) {
+                // 在加载扩展点实现的class的时候，顺便检查是否标注了@active注解，如果有则进行缓存
                 cacheActivateClass(clazz, names[0]);
                 for (String n : names) {
                     // 在cachedNames集合中缓存：实现类->扩展名的映射
@@ -1076,7 +1077,7 @@ public class ExtensionLoader<T> {
     private boolean isWrapperClass(Class<?> clazz) {
         try {
             /*
-            在 isWrapperClass() 方法中，会判断该扩展实现类是否包含拷贝构造函数（即构造函数只有一个参数且为扩展接口类型），
+            在 isWrapperClass() 方法中，会判断该扩展实现类是否包含一个特被的构造函数（即构造函数只有一个参数且为扩展接口类型），
             如果包含，则为 Wrapper 类，这就是判断 Wrapper 类的标准。
              */
             clazz.getConstructor(type);

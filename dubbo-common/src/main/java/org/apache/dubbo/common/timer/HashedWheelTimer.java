@@ -566,6 +566,7 @@ public class HashedWheelTimer implements Timer {
                 }
 
                 try {
+                    // 直接睡眠模拟时钟滴答滴答间隔
                     Thread.sleep(sleepTimeMs);
                 } catch (InterruptedException ignored) {
                     if (WORKER_STATE_UPDATER.get(HashedWheelTimer.this) == WORKER_STATE_SHUTDOWN) {

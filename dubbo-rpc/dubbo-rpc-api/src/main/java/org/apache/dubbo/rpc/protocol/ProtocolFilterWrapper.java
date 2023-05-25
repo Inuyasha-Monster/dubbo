@@ -42,6 +42,11 @@ public class ProtocolFilterWrapper implements Protocol {
 
     private final Protocol protocol;
 
+    /**
+     * 会被识别为wrapper类型因为该构造函数的唯一的参数类型为扩展接口类型，会被ExtensionLoader识别并调用形成包装类
+     *
+     * @param protocol
+     */
     public ProtocolFilterWrapper(Protocol protocol) {
         if (protocol == null) {
             throw new IllegalArgumentException("protocol == null");
@@ -49,6 +54,15 @@ public class ProtocolFilterWrapper implements Protocol {
         this.protocol = protocol;
     }
 
+    /**
+     * 构建rpc调用链
+     *
+     * @param invoker
+     * @param key
+     * @param group
+     * @param <T>
+     * @return
+     */
     private static <T> Invoker<T> buildInvokerChain(final Invoker<T> invoker, String key, String group) {
         Invoker<T> last = invoker;
 
@@ -163,6 +177,7 @@ public class ProtocolFilterWrapper implements Protocol {
     @Override
     public <T> Invoker<T> refer(Class<T> type, URL url) throws RpcException {
         if (UrlUtils.isRegistry(url)) {
+            // 如果是注册url不需要生成调用链
             return protocol.refer(type, url);
         }
         return buildInvokerChain(protocol.refer(type, url), REFERENCE_FILTER_KEY, CommonConstants.CONSUMER);
