@@ -504,8 +504,10 @@ public class DubboBootstrap extends GenericEventListener {
             return;
         }
 
+        // 利用 extensionLoader 加载框架内部的一些扩展初始化逻辑
         ApplicationModel.initFrameworkExts();
 
+        // 开启配置中心
         startConfigCenter();
 
         useRegistryAsConfigCenterIfNecessary();
@@ -600,8 +602,10 @@ public class DubboBootstrap extends GenericEventListener {
         }
 
         if (CollectionUtils.isNotEmpty(configCenters)) {
+            // 组合类型的动态配置,可以包括多个动态配置
             CompositeDynamicConfiguration compositeDynamicConfiguration = new CompositeDynamicConfiguration();
             for (ConfigCenterConfig configCenter : configCenters) {
+                // 通过配置中心的配置,然后再通过 DynamicConfigurationFactory 生成 DynamicConfiguration 对象加入组合中
                 compositeDynamicConfiguration.addConfiguration(prepareEnvironment(configCenter));
             }
             environment.setDynamicConfiguration(compositeDynamicConfiguration);
@@ -741,6 +745,8 @@ public class DubboBootstrap extends GenericEventListener {
     public DubboBootstrap start() {
         if (started.compareAndSet(false, true)) {
             ready.set(false);
+
+            // 执行初始化，内部包括启动配置中心
             initialize();
             if (logger.isInfoEnabled()) {
                 logger.info(NAME + " is starting...");
@@ -880,6 +886,7 @@ public class DubboBootstrap extends GenericEventListener {
             if (!configCenter.checkOrUpdateInited()) {
                 return null;
             }
+            // 根据 url 生成动态配置,其中会根据 url 的 protocol 来生成对应的扩展实现
             DynamicConfiguration dynamicConfiguration = getDynamicConfiguration(configCenter.toUrl());
             String configContent = dynamicConfiguration.getProperties(configCenter.getConfigFile(), configCenter.getGroup());
 

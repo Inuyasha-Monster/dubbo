@@ -28,6 +28,7 @@ public class ZookeeperDynamicConfigurationFactory extends AbstractDynamicConfigu
 
     private ZookeeperTransporter zookeeperTransporter;
 
+    // 这里是通过 extensionLoader 的动态注入来实现字段设置的
     public void setZookeeperTransporter(ZookeeperTransporter zookeeperTransporter) {
         this.zookeeperTransporter = zookeeperTransporter;
     }

@@ -35,7 +35,7 @@ public interface DynamicConfigurationFactory {
      * Get an instance of {@link DynamicConfigurationFactory} by the specified name. If not found, take the default
      * extension of {@link DynamicConfigurationFactory}
      *
-     * @param name the name of extension of {@link DynamicConfigurationFactory}
+     * @param name the name of extension of {@link DynamicConfigurationFactory} 扩展名
      * @return non-null
      * @see 2.7.4
      */
