@@ -67,6 +67,7 @@ import static org.apache.dubbo.registry.Constants.REGISTRY__LOCAL_FILE_CACHE_ENA
 
 /**
  * AbstractRegistry. (SPI, Prototype, ThreadSafe)
+ * 本地文件缓存的功能以及本地map缓存功能,在网络抖动等原因而导致订阅失败时，Consumer 端的 Registry 就可以调用 getCacheUrls() 方法获取本地缓存，从而得到最近注册的 Provider URL
  */
 public abstract class AbstractRegistry implements Registry {
 
@@ -78,25 +79,35 @@ public abstract class AbstractRegistry implements Registry {
     private static final int MAX_RETRY_TIMES_SAVE_PROPERTIES = 3;
     // Log output
     protected final Logger logger = LoggerFactory.getLogger(getClass());
-    // Local disk cache, where the special key value.registries records the list of registry centers, and the others are the list of notified service providers Key 是当前节点作为 Consumer 的一个 URL，Value 是对应的 Provider 列表，包含了所有 Category（例如，providers、routes、configurators 等） 下的 URL。properties 中有一个特殊的 Key 值为 registies，对应的 Value 是注册中心列表，其他记录的都是 Provider 列表。
+
+    // Local disk cache, where the special key value.registries records the list of registry centers, and the others are the list of notified service providers Key 是当前节点作为 Consumer 的一个 URL，Value 是对应的 Provider 列表，包含了所有 Category（例如，providers、routes、configurators 等） 下的 URL。properties 中有一个特殊的 Key 值为 registries，对应的 Value 是注册中心列表，其他记录的都是 Provider 列表。
     private final Properties properties = new Properties();
+
     // File cache timing writing 在一个 Provider 的注册数据发生变化的时候，会将该 Provider 的全量数据同步到 properties 字段和缓存文件中，如果 syncSaveFile 配置为 false，就由该线程池异步完成文件写入。
     private final ExecutorService registryCacheExecutor = Executors.newFixedThreadPool(1, new NamedThreadFactory("DubboSaveRegistryCache", true));
+
     // Is it synchronized to save the file
     private boolean syncSaveFile;
+
     // 注册数据的版本号，每次写入 file 文件时，都是全覆盖写入，而不是修改文件，所以需要版本控制，防止旧数据覆盖新数据。
     private final AtomicLong lastCacheChanged = new AtomicLong();
+
     private final AtomicInteger savePropertiesRetryTimes = new AtomicInteger();
+
     // 注册的url集合
     private final Set<URL> registered = new ConcurrentHashSet<>();
+
     // 表示订阅的url的监听器集合，key是被监听url，value是相应的监听器集合
     private final ConcurrentMap<URL, Set<NotifyListener>> subscribed = new ConcurrentHashMap<>();
+
     /**
      * 该集合第一层 Key 是当前节点作为 Consumer 的一个 URL，表示的是该节点的某个 Consumer 角色（一个节点可以同时消费多个 Provider 节点）；
      * Value 是一个 Map 集合，该 Map 集合的 Key 是 Provider URL 的分类（Category），例如 providers、routes、configurators 等，Value 就是相应分类下的 URL 集合。
      */
     private final ConcurrentMap<URL, Map<String, List<URL>>> notified = new ConcurrentHashMap<>();
+
     private URL registryUrl;
+
     // Local disk cache file
     private File file;
 
@@ -324,6 +335,7 @@ public abstract class AbstractRegistry implements Registry {
         if (logger.isInfoEnabled()) {
             logger.info("Subscribe: " + url);
         }
+        // 根据url创建监听器集合然后把当前的listener加入列表中
         Set<NotifyListener> listeners = subscribed.computeIfAbsent(url, n -> new ConcurrentHashSet<>());
         listeners.add(listener);
     }
@@ -420,6 +432,7 @@ public abstract class AbstractRegistry implements Registry {
             logger.info("Notify urls for subscribe url " + url + ", urls: " + urls);
         }
         // keep every provider's category.
+        // 获取最新的每个provider的全部分类配置
         Map<String, List<URL>> result = new HashMap<>();
         for (URL u : urls) {
             // 需要检测consumer与provider的url是匹配
@@ -437,12 +450,12 @@ public abstract class AbstractRegistry implements Registry {
         for (Map.Entry<String, List<URL>> entry : result.entrySet()) {
             String category = entry.getKey();
             List<URL> categoryList = entry.getValue();
-            // 更新本地缓存
+            // 更新本地缓存Map中; category 分类可能是 providers、routes、configurators
             categoryNotified.put(category, categoryList);
             // 触发监听器方法
             listener.notify(categoryList);
             // We will update our cache file after each notification.
-            // When our Registry has a subscribe failure due to network jitter, we can return at least the existing cache URL.
+            // When our Registry has an subscribe failure due to network jitter, we can return at least the existing cache URL.
             saveProperties(url);
         }
     }
@@ -459,6 +472,7 @@ public abstract class AbstractRegistry implements Registry {
                 for (List<URL> us : categoryNotified.values()) {
                     for (URL u : us) {
                         if (buf.length() > 0) {
+                            // 按照空格分割
                             buf.append(URL_SEPARATOR);
                         }
                         buf.append(u.toFullString());
