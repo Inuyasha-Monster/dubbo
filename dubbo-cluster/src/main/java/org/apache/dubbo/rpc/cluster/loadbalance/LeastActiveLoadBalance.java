@@ -100,7 +100,7 @@ public class LeastActiveLoadBalance extends AbstractLoadBalance {
             // If (not every invoker has the same weight & at least one invoker's weight>0), select randomly based on 
             // totalWeight.
             int offsetWeight = ThreadLocalRandom.current().nextInt(totalWeight);
-            // Return a invoker based on the random value.
+            // Return an invoker based on the random value.
             for (int i = 0; i < leastCount; i++) {
                 int leastIndex = leastIndexes[i];
                 offsetWeight -= weights[leastIndex];
