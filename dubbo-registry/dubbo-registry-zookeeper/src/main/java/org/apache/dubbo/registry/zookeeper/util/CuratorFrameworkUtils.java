@@ -75,8 +75,7 @@ public abstract class CuratorFrameworkUtils {
     }
 
 
-    public static List<ServiceInstance> build(Collection<org.apache.curator.x.discovery.ServiceInstance<ZookeeperInstance>>
-                                                      instances) {
+    public static List<ServiceInstance> build(Collection<org.apache.curator.x.discovery.ServiceInstance<ZookeeperInstance>> instances) {
         return instances.stream().map(CuratorFrameworkUtils::build).collect(Collectors.toList());
     }
 

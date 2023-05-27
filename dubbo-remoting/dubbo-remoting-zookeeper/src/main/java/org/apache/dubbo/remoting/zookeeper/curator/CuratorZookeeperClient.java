@@ -41,6 +41,7 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -54,9 +55,9 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorZooke
     protected static final Logger logger = LoggerFactory.getLogger(CuratorZookeeperClient.class);
     private static final String ZK_SESSION_EXPIRE_KEY = "zk.session.expire";
 
-    static final Charset CHARSET = Charset.forName("UTF-8");
+    static final Charset CHARSET = StandardCharsets.UTF_8;
     private final CuratorFramework client;
-    private Map<String, TreeCache> treeCacheMap = new ConcurrentHashMap<>();
+    private final Map<String, TreeCache> treeCacheMap = new ConcurrentHashMap<>();
 
     public CuratorZookeeperClient(URL url) {
         super(url);
@@ -207,6 +208,13 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorZooke
     @Override
     public List<String> addTargetChildListener(String path, CuratorWatcherImpl listener) {
         try {
+            // 采用了类似zookeeper原生的监听器写法,在事件处理中需要手动重复注册监听,并没有采用PathChildrenCache来做
+            //
+            // 猜测可能因为PathChildrenCache在存在一定的不可靠性:
+            // 注意事项：
+            // 1、Curator只是封装了原生Zookeeper的监听事件，使客户端程序员无序重复注册Watcher，但是Wathcer的一次性还是存在的，只是由curator完成。因此对于某些场景使用依然需要慎重。因为curator需要重复注册，因此，第一次触发Wathcer与再次注册Watcher即使是异常操作，但是中间还是存在时延，假使对于Zookeeper瞬时触发几个事件，则该监听器并不能保证监听到所有状态的改变，至于可以监听到多少取决于服务器的处理速度。
+            // 2、只要curator的cache启动成功，监听器注册成功，理论上只要没有1的情况下，监听器是可以很完美的处理需要监听到的事件。但是如果在cache.start()的时候，与Zookeeper的连接是中断的，则后续连接恢复，也无法让客户端感知到需要监听的变动。我当时想到的一个解决方案是在Zookeeper启动的时候设置一个连接状态的监听器（连接状态监听器看第7节），如果Zookeeper客户端连接状态是连接失败，则添加这个监听器，恢复连接的时候，调用cache.clearAndRefresh()，然后移除连接状态监听器即可。
+            // 但是，这个接口只针对PathChildrenCache，因为该监听器监听节点删除的时候，再次创建也不会再有重新监听的效果，调用该接口即可恢复。另外两种监听器可以不用考虑这种情况，原因取决于监听器的内部实现。
             return client.getChildren().usingWatcher(listener).forPath(path);
         } catch (NoNodeException e) {
             return null;
@@ -257,6 +265,10 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorZooke
         listener.unwatch();
     }
 
+    /**
+     * TreeCacheListener综合NodeCache和PathChildrenCache的特性，是对整个目录进行监听，可以设置监听深度。
+     * 这里既有childPath的监听实现也又dataChanged的监听实现,可以参考学习这种方式
+     */
     static class CuratorWatcherImpl implements CuratorWatcher, TreeCacheListener {
 
         private CuratorFramework client;
@@ -290,6 +302,7 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorZooke
             }
 
             if (childListener != null) {
+                // 这里手动重复监听
                 childListener.childChanged(path, client.getChildren().usingWatcher(this).forPath(path));
             }
         }
@@ -305,6 +318,7 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorZooke
                 String content = null;
                 String path = null;
                 switch (type) {
+                    // 添加和更新的场景从event读取最新的数据
                     case NODE_ADDED:
                         eventType = EventType.NodeCreated;
                         path = event.getData().getPath();
@@ -333,16 +347,20 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorZooke
                         break;
 
                 }
+                // 最后回调到外部封装的数据监听器,然后进一步回到最上层的ConfigurationListener集合
                 dataListener.dataChanged(path, content, eventType);
             }
         }
     }
 
+    /**
+     * 监听zkclient与server的连接状况
+     */
     private class CuratorConnectionStateListener implements ConnectionStateListener {
         private final long UNKNOWN_SESSION_ID = -1L;
 
         private long lastSessionId;
-        private URL url;
+        private final URL url;
 
         public CuratorConnectionStateListener(URL url) {
             this.url = url;
