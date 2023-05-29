@@ -21,7 +21,7 @@ import org.apache.dubbo.common.config.configcenter.DynamicConfiguration;
 
 public class DefaultGovernanceRuleRepositoryImpl implements GovernanceRuleRepository {
 
-    private DynamicConfiguration dynamicConfiguration = DynamicConfiguration.getDynamicConfiguration();
+    private final DynamicConfiguration dynamicConfiguration = DynamicConfiguration.getDynamicConfiguration();
 
     @Override
     public void addListener(String key, String group, ConfigurationListener listener) {

@@ -40,6 +40,7 @@ import static org.apache.dubbo.common.constants.CommonConstants.PATH_SEPARATOR;
 public class CacheListener implements DataListener {
     private static final int MIN_PATH_DEPTH = 5;
 
+    // key=path
     private final Map<String, Set<ConfigurationListener>> keyListeners = new ConcurrentHashMap<>();
     private final CountDownLatch initializedLatch;
     private final String rootPath;
@@ -125,8 +126,10 @@ public class CacheListener implements DataListener {
             }
 
             ConfigChangedEvent configChangeEvent = new ConfigChangedEvent(key, getGroup(path), (String) value, changeType);
+            // 跟对对应的path找到对应的监听器集合,然后触发监听的回调函数
             Set<ConfigurationListener> listeners = keyListeners.get(path);
             if (CollectionUtils.isNotEmpty(listeners)) {
+                // 循环触发注册的配置监听器,例如:tag,router,provider,consumer等需要去调整各自运行时配置
                 listeners.forEach(listener -> listener.process(configChangeEvent));
             }
         }

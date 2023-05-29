@@ -146,16 +146,20 @@ public class ZookeeperRegistry extends FailbackRegistry {
             if (ANY_VALUE.equals(url.getServiceInterface())) {
                 String root = toRootPath();
                 ConcurrentMap<NotifyListener, ChildListener> listeners = zkListeners.computeIfAbsent(url, k -> new ConcurrentHashMap<>());
-                ChildListener zkListener = listeners.computeIfAbsent(listener, k -> (parentPath, currentChilds) -> {
-                    for (String child : currentChilds) {
-                        child = URL.decode(child);
-                        if (!anyServices.contains(child)) {
-                            anyServices.add(child);
-                            subscribe(url.setPath(child).addParameters(INTERFACE_KEY, child,
-                                    Constants.CHECK_KEY, String.valueOf(false)), k);
-                        }
-                    }
-                });
+
+                ChildListener zkListener = listeners.computeIfAbsent(listener,
+                        notifyListener -> (parentPath, currentChilds) -> {
+                            for (String child : currentChilds) {
+                                child = URL.decode(child);
+                                if (!anyServices.contains(child)) {
+                                    anyServices.add(child);
+                                    // 订阅孩子节点路径变化
+                                    subscribe(url.setPath(child).addParameters(INTERFACE_KEY, child,
+                                            Constants.CHECK_KEY, String.valueOf(false)), notifyListener);
+                                }
+                            }
+                        });
+
                 zkClient.create(root, false);
                 List<String> services = zkClient.addChildListener(root, zkListener);
                 if (CollectionUtils.isNotEmpty(services)) {

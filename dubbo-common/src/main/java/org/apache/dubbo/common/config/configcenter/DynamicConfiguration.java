@@ -68,6 +68,7 @@ public interface DynamicConfiguration extends Configuration, AutoCloseable {
     }
 
     /**
+     * 这里是给服务治理来注册监听器的,然后配置变更之后就会通知到服务治理的相应环节
      * Register a configuration listener for a specified key
      * The listener only works for service governance purpose, so the target group would always be the value user
      * specifies at startup or 'dubbo' by default. This method will only register listener, which means it will not

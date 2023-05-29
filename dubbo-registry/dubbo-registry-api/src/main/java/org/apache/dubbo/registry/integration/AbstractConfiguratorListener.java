@@ -42,6 +42,7 @@ public abstract class AbstractConfiguratorListener implements ConfigurationListe
             GovernanceRuleRepository.class).getDefaultExtension();
 
     protected final void initWith(String key) {
+        // 注册配置变更的监听器
         ruleRepository.addListener(key, this);
         String rawConfig = ruleRepository.getRule(key, DynamicConfiguration.DEFAULT_GROUP);
         if (!StringUtils.isEmpty(rawConfig)) {

@@ -108,7 +108,7 @@ public abstract class AbstractZookeeperClient<TargetDataListener, TargetChildLis
     @Override
     public List<String> addChildListener(String path, final ChildListener listener) {
         ConcurrentMap<ChildListener, TargetChildListener> listeners = childListeners.computeIfAbsent(path, k -> new ConcurrentHashMap<>());
-        TargetChildListener targetListener = listeners.computeIfAbsent(listener, k -> createTargetChildListener(path, k));
+        TargetChildListener targetListener = listeners.computeIfAbsent(listener, childListener -> createTargetChildListener(path, childListener));
         return addTargetChildListener(path, targetListener);
     }
 

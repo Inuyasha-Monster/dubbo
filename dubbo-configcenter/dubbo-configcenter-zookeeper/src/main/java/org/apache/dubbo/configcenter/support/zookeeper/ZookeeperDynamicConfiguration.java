@@ -49,14 +49,14 @@ public class ZookeeperDynamicConfiguration implements DynamicConfiguration {
 
     private static final Logger logger = LoggerFactory.getLogger(ZookeeperDynamicConfiguration.class);
 
-    private Executor executor;
+    private final Executor executor;
     // The final root path would be: /configRootPath/"config"
-    private String rootPath;
+    private final String rootPath;
     private final ZookeeperClient zkClient;
-    private CountDownLatch initializedLatch;
+    private final CountDownLatch initializedLatch;
 
-    private CacheListener cacheListener;
-    private URL url;
+    private final CacheListener cacheListener;
+    private final URL url;
 
 
     ZookeeperDynamicConfiguration(URL url, ZookeeperTransporter zookeeperTransporter) {
